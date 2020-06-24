@@ -15,11 +15,11 @@ sudo apt-get install nlsr -y
 sudo apt-get install libchronosync -y
 sudo apt-get install libpsync -y
 
-# create a directory for nlsr logging
+# create a directory for nlsr config and logging
 mkdir -p ~/nlsr/log/
 
 # copy the appropriate nlsr configuration file to the nlsr directory
-cp /local/repository/nlsr1.conf ~/nlsr/nlsr.conf
+cp /local/repository/setup/up_cl.conf ~/nlsr/nlsr.conf
 
 # copy a .vimrc on each VM (provides useful remappings)
 cp /local/repository/.vimrc ~/
