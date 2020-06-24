@@ -1,15 +1,11 @@
 # Experimental Notes
 
 **To-do:**
+* Update profile to properly configure new network
+* Experiment with video streaming over NDN
 * Experiment with ndn-traffic-generator
-* Write a program for easier experimental router configuration? (nlsr.conf)
 * Experiment with ndn client-side libraries
-* Better understand the routing software
-  * configuration files?
-  * autogenerate routes to producers
-  * avoid manual setup of routes
-* Get NDN working over ethernet
-* Get NDN working over a 4G or 5G network
+* Get NDN working over ethernet (try running nfd as root?)
 
 
 **Things we've learned:**
