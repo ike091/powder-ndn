@@ -21,11 +21,11 @@ class GLOBALS(object):
 # define network parameters
 portal.context.defineParameter("latency_external", "Latency to external data network", portal.ParameterType.LATENCY, 40.0)
 portal.context.defineParameter("bandwidth_external", "Bandwidth to external data network", portal.ParameterType.BANDWIDTH, 110000.0)
-portal.context.defineParameter("packet_loss_external", "Packet loss rate to external data network", portal.ParameterType.STRING, 0.0)
+portal.context.defineParameter("packet_loss_external", "Packet loss rate to external data network", portal.ParameterType.STRING, '0.0')
 
 portal.context.defineParameter("latency_internal", "Latency to internal data network", portal.ParameterType.LATENCY, 2.0)
 portal.context.defineParameter("bandwidth_internal", "Bandwidth to internal data network", portal.ParameterType.BANDWIDTH, 110000.0)
-portal.context.defineParameter("packet_loss_internal", "Packet loss rate to internal data network", portal.ParameterType.STRING, 0.0)
+portal.context.defineParameter("packet_loss_internal", "Packet loss rate to internal data network", portal.ParameterType.STRING, '0.0')
 
 # retrieve the values the user specifies during instantiation
 params = portal.context.bindParameters()
@@ -37,7 +37,16 @@ if params.latency_external < 0 or params.latency_internal < 0:
 if params.bandwidth_external < 0 or params.bandwidth_internal < 0:
     portal.context.reportError(portal.ParameterError("Bandwidth cannot be negative."))
 
-if params.packet_loss_external > 1 or params.packet_loss_internal > 1 or params.packet_loss_external < 0 or params.packet_loss_internal < 0:
+try:
+    if float(params.packet_loss_external) > 1 or float(params.packet_loss_external) < 0:
+        portal.context.reportError(portal.ParameterError("Packet loss rate must be a number between 0 and 1."))
+except ValueError:
+    portal.context.reportError(portal.ParameterError("Packet loss rate must be a number between 0 and 1."))
+
+try:
+    if float(params.packet_loss_internal) > 1 or float(params.packet_loss_internal) < 0:
+        portal.context.reportError(portal.ParameterError("Packet loss rate must be a number between 0 and 1."))
+except ValueError:
     portal.context.reportError(portal.ParameterError("Packet loss rate must be a number between 0 and 1."))
 
 
@@ -132,12 +141,13 @@ internal_dn_link = request.Link(members=[routers['up_cl'], routers['internal_dn'
 # shape external link
 external_dn_link.bandwidth = params.bandwidth_external
 external_dn_link.latency = params.latency_external
-external_dn_link.packet_loss = params.packet_loss_external
+# no exception catching is needed as validity has already been checked
+external_dn_link.plr = float(params.packet_loss_external) 
 
 # shape internal link
 internal_dn_link.bandwidth = params.bandwidth_internal
 internal_dn_link.latency = params.latency_internal
-internal_dn_link.packet_loss = params.packet_loss_internal
+internal_dn_link.plr = float(params.packet_loss_internal) 
 
 # output request
 pc.printRequestRSpec(request)
