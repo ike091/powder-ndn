@@ -14,8 +14,10 @@ class GLOBALS(object):
     SITE_URN = "urn:publicid:IDN+emulab.net+authority+cm"
     # standard Ubuntu release
     UBUNTU18_IMG = "urn:publicid:IDN+emulab.net+image+emulab-ops:UBUNTU18-64-STD"
-    PNODE_D740 = "d740"  # 24 cores, 192 GB RAM TODO: figure out the proper amount of ram, docs are incorrect
-    PNODE_D840 = "d840"  # 64 cores, 768 GB RAM
+    # d740 - 24 cores, 192 GB RAM TODO: figure out the proper amount of ram, docs are incorrect
+    # d840 - 64 cores, 768 GB RAM
+    # d820 - 32 cores, 128 GB RAM
+    PHYSICAL_NODE_TYPES = ["d740", "d840", "d820"]
 
 
 # define network parameters
@@ -27,10 +29,12 @@ portal.context.defineParameter("latency_internal", "Latency to internal data net
 portal.context.defineParameter("bandwidth_internal", "Bandwidth to internal data network (kbps)", portal.ParameterType.INTEGER, 110000)
 portal.context.defineParameter("packet_loss_internal", "Packet loss rate to internal data network (rate between 0.0 and 1.0)", portal.ParameterType.STRING, '0.0')
 
+portal.context.defineParameter("physical_host_type", "Type of physical host (d740, d840, or d820)", portal.ParameterType.STRING, 'd740')
+
 # retrieve the values the user specifies during instantiation
 params = portal.context.bindParameters()
 
-#  check parameter validity
+# check link shape parameter validity
 if params.latency_external < 0 or params.latency_internal < 0:
     portal.context.reportError(portal.ParameterError("Latency cannot be negative."))
 
@@ -48,6 +52,14 @@ try:
         portal.context.reportError(portal.ParameterError("Packet loss rate must be a number between 0 and 1."))
 except ValueError:
     portal.context.reportError(portal.ParameterError("Packet loss rate must be a number between 0 and 1."))
+
+# check node type validity
+valid_type = False
+for node_type in GLOBALS.PHYSICAL_NODE_TYPES: 
+    if params.physical_host_type == node_type:
+        valid_type = True
+if not valid_type:
+    portal.context.reportError(portal.ParameterError("Invalid node type."))
 
 
 def mkVM(name, image, instantiateOn, cores, ram):
@@ -121,7 +133,7 @@ request = pc.makeRequestRSpec()
 
 # declare a dedicated VM host
 pnode = request.RawPC('pnode')
-pnode.hardware_type = GLOBALS.PNODE_D740
+pnode.hardware_type = params.physical_host_type
 
 # create nodes on dedicated host
 routers = create_routers(names=['up_cl', 'external_dn', 'internal_dn'])
