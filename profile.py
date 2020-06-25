@@ -57,7 +57,7 @@ def mkVM(name, image, instantiateOn, cores, ram):
 
 
 def create_UEs(count=2, prefix=1, instantiateOn='pnode', cores=2, ram=4):
-    """Allocates and runs an install script on a specified number of VM nodes
+    """Allocates and runs an install script on a specified number of VM nodes.
 
     Returns a list of nodes.
     """
@@ -74,36 +74,34 @@ def create_UEs(count=2, prefix=1, instantiateOn='pnode', cores=2, ram=4):
     for node in nodes:
         if node is not None:
             node.addService(pg.Execute(shell="sh", command="chmod +x /local/repository/install_ndn_client.sh"))
-            node.addService(pg.Execute(shell="sh", command="/local/repository/install_ndn_client.sh"))
+        node.addService(pg.Execute(shell="sh", command="/local/repository/install_ndn_client.sh"))
 
     return nodes
 
 
-def create_routers(instantiateOn='pnode', cores=4, ram=8):
-    """Allocates and runs an install script on virtualized routers
+def create_routers(names, instantiateOn='pnode', cores=4, ram=8):
+    """Allocates and runs an install script on virtualized routers.
 
     Returns a list of routers.
     """
 
-    routers = []
-    # index routers by their proper number (not zero-indexed)
-    routers.append(None)
+    routers = dict()
 
-    # create each VM
-    for i in range(1, 3):
-        routers.append(mkVM('router' + str(i), GLOBALS.UBUNTU18_IMG, instantiateOn=instantiateOn, cores=cores, ram=ram))
+    for name in names:
+        routers[name] = mkVM(name, GLOBALS.UBUNTU18_IMG, instantiateOn=instantiateOn, cores=cores, ram=ram)
 
-    # run alternating install scripts on each vm to install software
-    odd_router = True
-    for router in routers:
-        if router is not None:
-            if odd_router:
-                router.addService(pg.Execute(shell="sh", command="chmod +x /local/repository/install1.sh"))
-                router.addService(pg.Execute(shell="sh", command="/local/repository/install1.sh"))
-            else:
-                router.addService(pg.Execute(shell="sh", command="chmod +x /local/repository/install2.sh"))
-                router.addService(pg.Execute(shell="sh", command="/local/repository/install2.sh"))
-            odd_router = not odd_router
+        # run appropriate install scripts based on name of router
+        if name == 'up_cl':
+            routers['up_cl'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/up_cl.sh"))
+            routers['up_cl'].addService(pg.Execute(shell="sh", command="/local/repository/setup/up_cl.sh"))
+
+        if name == 'external_dn':
+            routers['external_dn'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/external_dn.sh"))
+            routers['external_dn'].addService(pg.Execute(shell="sh", command="/local/repository/setup/external_dn.sh"))
+
+        if name == 'internal_dn':
+            routers['internal_dn'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/internal_dn.sh"))
+            routers['internal_dn'].addService(pg.Execute(shell="sh", command="/local/repository/setup/internal_dn.sh"))
 
     return routers
 
@@ -117,27 +115,29 @@ pnode = request.RawPC('pnode')
 pnode.hardware_type = GLOBALS.PNODE_D740
 
 # create nodes on dedicated host
-routers = create_routers()
-nodes1 = create_nodes(count=params.n, prefix=1)
-nodes2 = create_nodes(count=params.n, prefix=2)
+routers = create_routers(names=['up_cl', 'external_dn', 'internal_dn'])
+UEs = create_UEs(count=2, prefix=1)
 
-
-# setup the first LAN
+# set up the UE to UP_CL connection
 LAN1 = request.LAN("LAN1")
-LAN1.addInterface(routers[1].addInterface())
-for node in nodes1:
-    if node is not None:
-        LAN1.addInterface(node.addInterface())
+LAN1.addInterface(routers['up_cl'].addInterface())
+for UE in UEs:
+    if UE is not None:
+        LAN1.addInterface(UE.addInterface())
 
-# setup the second LAN
-LAN2 = request.LAN("LAN2")
-LAN2.addInterface(routers[2].addInterface())
-for node in nodes2:
-    if node is not None:
-        LAN2.addInterface(node.addInterface())
+# set up router links
+external_dn_link = request.Link(members=[routers['up_cl'], routers['external_dn']])
+internal_dn_link = request.Link(members=[routers['up_cl'], routers['internal_dn']])
 
-# setup a link between routerss
-request.Link(members=[routers[1], routers[2]])
+# shape external link
+external_dn_link.bandwidth = params.bandwidth_external
+external_dn_link.latency = params.latency_external
+external_dn_link.packet_loss = params.packet_loss_external
+
+# shape internal link
+internal_dn_link.bandwidth = params.bandwidth_internal
+internal_dn_link.latency = params.latency_internal
+internal_dn_link.packet_loss = params.packet_loss_internal
 
 # output request
 pc.printRequestRSpec(request)
