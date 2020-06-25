@@ -147,8 +147,16 @@ for UE in UEs:
         LAN1.addInterface(UE.addInterface())
 
 # set up router links
-external_dn_link = request.Link(members=[routers['up-cl'], routers['external-dn']])
-internal_dn_link = request.Link(members=[routers['up-cl'], routers['internal-dn']])
+#  external_dn_link = request.Link(members=[routers['up-cl'], routers['external-dn']])
+#  internal_dn_link = request.Link(members=[routers['up-cl'], routers['internal-dn']])
+
+external_dn_link = request.Link("external_dn_link")
+external_dn_link.addInterface(routers['up-cl'].addInterface())
+external_dn_link.addInterface(routers['external-dn'].addInterface())
+
+internal_dn_link = request.Link("internal_dn_link")
+internal_dn_link.addInterface(routers['up-cl'].addInterface())
+internal_dn_link.addInterface(routers['internal-dn'].addInterface())
 
 # shape external link
 external_dn_link.bandwidth = params.bandwidth_external
