@@ -94,8 +94,8 @@ def create_UEs(count=2, prefix=1, instantiateOn='pnode', cores=2, ram=4):
     # run client install script on each vm to install client software
     for node in nodes:
         if node is not None:
-            node.addService(pg.Execute(shell="sh", command="chmod +x /local/repository/install_ndn_client.sh"))
-            node.addService(pg.Execute(shell="sh", command="/local/repository/install_ndn_client.sh"))
+            node.addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/install_ndn_client.sh"))
+            node.addService(pg.Execute(shell="sh", command="/local/repository/setup/install_ndn_client.sh"))
 
     return nodes
 
@@ -112,17 +112,17 @@ def create_routers(names, instantiateOn='pnode', cores=4, ram=8):
         routers[name] = mkVM(name, GLOBALS.UBUNTU18_IMG, instantiateOn=instantiateOn, cores=cores, ram=ram)
 
         # run appropriate install scripts based on name of router
-        if name == 'up_cl':
-            routers['up_cl'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/up_cl.sh"))
-            routers['up_cl'].addService(pg.Execute(shell="sh", command="/local/repository/setup/up_cl.sh"))
+        if name == 'up-cl':
+            routers['up-cl'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/up_cl.sh"))
+            routers['up-cl'].addService(pg.Execute(shell="sh", command="/local/repository/setup/up_cl.sh"))
 
-        if name == 'external_dn':
-            routers['external_dn'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/external_dn.sh"))
-            routers['external_dn'].addService(pg.Execute(shell="sh", command="/local/repository/setup/external_dn.sh"))
+        if name == 'external-dn':
+            routers['external-dn'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/external_dn.sh"))
+            routers['external-dn'].addService(pg.Execute(shell="sh", command="/local/repository/setup/external_dn.sh"))
 
-        if name == 'internal_dn':
-            routers['internal_dn'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/internal_dn.sh"))
-            routers['internal_dn'].addService(pg.Execute(shell="sh", command="/local/repository/setup/internal_dn.sh"))
+        if name == 'internal-dn':
+            routers['internal-dn'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/internal_dn.sh"))
+            routers['internal-dn'].addService(pg.Execute(shell="sh", command="/local/repository/setup/internal_dn.sh"))
 
     return routers
 
@@ -136,19 +136,19 @@ pnode = request.RawPC('pnode')
 pnode.hardware_type = params.physical_host_type
 
 # create nodes on dedicated host
-routers = create_routers(names=['up_cl', 'external_dn', 'internal_dn'])
+routers = create_routers(names=['up-cl', 'external-dn', 'internal-dn'])
 UEs = create_UEs(count=2, prefix=1)
 
 # set up the UE to UP_CL connection
 LAN1 = request.LAN("LAN1")
-LAN1.addInterface(routers['up_cl'].addInterface())
+LAN1.addInterface(routers['up-cl'].addInterface())
 for UE in UEs:
     if UE is not None:
         LAN1.addInterface(UE.addInterface())
 
 # set up router links
-external_dn_link = request.Link(members=[routers['up_cl'], routers['external_dn']])
-internal_dn_link = request.Link(members=[routers['up_cl'], routers['internal_dn']])
+external_dn_link = request.Link(members=[routers['up-cl'], routers['external-dn']])
+internal_dn_link = request.Link(members=[routers['up-cl'], routers['internal-dn']])
 
 # shape external link
 external_dn_link.bandwidth = params.bandwidth_external

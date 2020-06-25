@@ -24,3 +24,4 @@ cp /local/repository/setup/external_dn.conf ~/nlsr/nlsr.conf
 # copy a .vimrc on each VM (provides useful remappings)
 cp /local/repository/.vimrc ~/
 
+nfdc face create udp4://10.10.2.1

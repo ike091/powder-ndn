@@ -24,3 +24,5 @@ cp /local/repository/setup/up_cl.conf ~/nlsr/nlsr.conf
 # copy a .vimrc on each VM (provides useful remappings)
 cp /local/repository/.vimrc ~/
 
+nfdc face create udp4://10.10.3.2
+nfdc face create udp4://10.10.2.2
