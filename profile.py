@@ -20,11 +20,11 @@ class GLOBALS(object):
 
 # define network parameters
 portal.context.defineParameter("latency_external", "Latency to external data network (ms)", portal.ParameterType.LATENCY, 40)
-portal.context.defineParameter("bandwidth_external", "Bandwidth to external data network (kbps)", portal.ParameterType.BANDWIDTH, 110000)
+portal.context.defineParameter("bandwidth_external", "Bandwidth to external data network (kbps)", portal.ParameterType.INTEGER, 110000)
 portal.context.defineParameter("packet_loss_external", "Packet loss rate to external data network (rate between 0.0 and 1.0)", portal.ParameterType.STRING, '0.0')
 
 portal.context.defineParameter("latency_internal", "Latency to internal data network (ms)", portal.ParameterType.LATENCY, 2)
-portal.context.defineParameter("bandwidth_internal", "Bandwidth to internal data network (kbps)", portal.ParameterType.BANDWIDTH, 110000)
+portal.context.defineParameter("bandwidth_internal", "Bandwidth to internal data network (kbps)", portal.ParameterType.INTEGER, 110000)
 portal.context.defineParameter("packet_loss_internal", "Packet loss rate to internal data network (rate between 0.0 and 1.0)", portal.ParameterType.STRING, '0.0')
 
 # retrieve the values the user specifies during instantiation
