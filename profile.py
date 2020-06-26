@@ -10,13 +10,14 @@ import geni.rspec.emulab as elab
 
 
 class GLOBALS(object):
-    """useful constant values for setting up a powder experiment"""
+    """Useful constant values for setting up a powder experiment
+
+    d740 - 24 cores, 192 GB RAM TODO: figure out the proper amount of ram, docs are incorrect
+    d840 - 64 cores, 768 GB RAM
+    d820 - 32 cores, 128 GB RAM
+    """
     SITE_URN = "urn:publicid:IDN+emulab.net+authority+cm"
-    # standard Ubuntu release
     UBUNTU18_IMG = "urn:publicid:IDN+emulab.net+image+emulab-ops:UBUNTU18-64-STD"
-    # d740 - 24 cores, 192 GB RAM TODO: figure out the proper amount of ram, docs are incorrect
-    # d840 - 64 cores, 768 GB RAM
-    # d820 - 32 cores, 128 GB RAM
     PHYSICAL_NODE_TYPES = ["d740", "d840", "d820"]
 
 
@@ -54,15 +55,11 @@ except ValueError:
     portal.context.reportError(portal.ParameterError("Packet loss rate must be a number between 0 and 1."))
 
 # check node type validity
-valid_type = False
-for node_type in GLOBALS.PHYSICAL_NODE_TYPES: 
-    if params.physical_host_type == node_type:
-        valid_type = True
-if not valid_type:
+if params.physical_host_type not in GLOBALS.PHYSICAL_NODE_TYPES:
     portal.context.reportError(portal.ParameterError("Invalid node type."))
 
 
-def mkVM(name, image, instantiateOn, cores, ram):
+def make_VM(name, image, instantiateOn, cores, ram):
     """Creates a VM with the specified parameters
 
     Returns that VM
@@ -78,18 +75,18 @@ def mkVM(name, image, instantiateOn, cores, ram):
 
 
 def create_UEs(count=2, prefix=1, instantiateOn='pnode', cores=2, ram=4):
-    """Allocates and runs an install script on a specified number of VM nodes.
+    """Allocates and runs an install script on a specified number of VM UE nodes.
 
     Returns a list of nodes.
     """
 
     nodes = []
-    # index nodes by their proper number (not zero-indexed)
+    # index nodes at one
     nodes.append(None)
 
     # create each VM
     for i in range(1, count + 1):
-        nodes.append(mkVM('node' + str(prefix) + '-' + str(i), GLOBALS.UBUNTU18_IMG, instantiateOn=instantiateOn, cores=cores, ram=ram))
+        nodes.append(make_VM('node' + str(prefix) + '-' + str(i), GLOBALS.UBUNTU18_IMG, instantiateOn=instantiateOn, cores=cores, ram=ram))
 
     # run client install script on each vm to install client software
     for node in nodes:
@@ -109,20 +106,11 @@ def create_routers(names, instantiateOn='pnode', cores=4, ram=8):
     routers = dict()
 
     for name in names:
-        routers[name] = mkVM(name, GLOBALS.UBUNTU18_IMG, instantiateOn=instantiateOn, cores=cores, ram=ram)
+        routers[name] = make_VM(name, GLOBALS.UBUNTU18_IMG, instantiateOn=instantiateOn, cores=cores, ram=ram)
 
         # run appropriate install scripts based on name of router
-        if name == 'up-cl':
-            routers['up-cl'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/up_cl.sh"))
-            routers['up-cl'].addService(pg.Execute(shell="sh", command="/local/repository/setup/up_cl.sh"))
-
-        if name == 'external-dn':
-            routers['external-dn'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/external_dn.sh"))
-            routers['external-dn'].addService(pg.Execute(shell="sh", command="/local/repository/setup/external_dn.sh"))
-
-        if name == 'internal-dn':
-            routers['internal-dn'].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/internal_dn.sh"))
-            routers['internal-dn'].addService(pg.Execute(shell="sh", command="/local/repository/setup/internal_dn.sh"))
+        routers[name].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/" + name + ".sh"))
+        routers[name].addService(pg.Execute(shell="sh", command="/local/repository/setup/" + name + ".sh"))
 
     return routers
 
@@ -139,7 +127,7 @@ pnode.hardware_type = params.physical_host_type
 routers = create_routers(names=['up-cl', 'external-dn', 'internal-dn'])
 UEs = create_UEs(count=2, prefix=1)
 
-# set up the UE to UP_CL connection
+# set up the UE to UP-CL connection
 LAN1 = request.LAN("LAN1")
 LAN1.addInterface(routers['up-cl'].addInterface())
 for UE in UEs:
