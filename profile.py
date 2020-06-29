@@ -156,9 +156,9 @@ internal_dn_link.latency = int(params.latency_internal)
 internal_dn_link.plr = float(params.packet_loss_internal) 
 
 
-routers['up-cl'].addService(pg.Execute(shell='sh', command='echo "' + str(params.bandwidth_external) + '" >> ~/test.txt'))
-routers['up-cl'].addService(pg.Execute(shell='sh', command='echo "' + str(params.latency_external) + '" >> ~/test.txt'))
-routers['up-cl'].addService(pg.Execute(shell='sh', command='echo "' + str(params.packet_loss_internal) + '" >> ~/test.txt'))
+routers['up-cl'].addService(pg.Execute(shell='sh', command='sudo echo "' + str(params.bandwidth_external) + '" >> /var/tmp/test.txt'))
+routers['up-cl'].addService(pg.Execute(shell='sh', command='sudo echo "' + str(params.latency_external) + '" >> /var/tmp/test.txt'))
+routers['up-cl'].addService(pg.Execute(shell='sh', command='sudo echo "' + str(params.packet_loss_internal) + '" >> /var/tmp/test.txt'))
 
 # output request
 pc.printRequestRSpec(request)

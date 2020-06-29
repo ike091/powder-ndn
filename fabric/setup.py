@@ -1,5 +1,5 @@
 """ 
-This script handles various tasks for the powder-ndn profile 
+This script handles setup for the powder-ndn profile 
 
 """
 from fabric import Connection
@@ -33,8 +33,29 @@ def run_bg(this_connection, cmd, sockname='dtach'):
     return this_connection.run('dtach -n `mktemp -u /tmp/%s.XXXX` %s' % (sockname, cmd))
 
 
+def create_faces():
+    connection['up-cl'].run('nfdc face create udp4://10.10.3.2')
+    connection['up-cl'].run('nfdc face create udp4://10.10.2.2')
+    connection['external-dn'].run('nfdc face create udp4://10.10.2.1')
+    connection['internal-dn'].run('nfdc face create udp4://10.10.3.1')
+
+
+def start_nlsr():
+    run_bg(connection['up-cl'], 'nlsr -f ~/nlsr/nlsr.conf')
+    run_bg(connection['external-dn'], 'nlsr -f ~/nlsr/nlsr.conf')
+    run_bg(connection['internal-dn'], 'nlsr -f ~/nlsr/nlsr.conf')
+
+
+def start_ping_servers():
+    run_bg(connection['up-cl'], 'ndnpingserver /ndn/up-cl/ping')
+    run_bg(connection['external-dn'], 'ndnpingserver /ndn/external/ping')
+    run_bg(connection['internal-dn'], 'ndnpingserver /ndn/internal/ping')
 
 
 # start main scripting here
 
+install_dtach()
+create_faces()
+start_nlsr()
+start_ping_servers()
 
