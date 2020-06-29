@@ -45,6 +45,7 @@ def dump(*list):
 
 
 class Producer():
+    """Hosts data under a certain namespace"""
     def __init__(self):
         self.keyChain = KeyChain()
         self.keyChain.createIdentityV2(Name("/ndn/identity"))
@@ -52,6 +53,7 @@ class Producer():
 
 
     def run(self, namespace):
+        """Starts listening for interest packets in the given namespace"""
         # Create a connection to the local forwarder over a Unix socket
         face = Face()
 
@@ -74,6 +76,7 @@ class Producer():
 
 
     def onInterest(self, prefix, interest, transport, registeredPrefixId):
+        """Called when an interest for the specified name is recieved"""
         interestName = interest.getName()
 
         data = Data(interestName)
@@ -90,6 +93,7 @@ class Producer():
 
 
     def onRegisterFailed(self, prefix):
+        """Called when forwarder can't register prefix"""
         dump("Register failed for prefix", prefix.toUri())
         self.isDone = True
 
@@ -98,6 +102,7 @@ def main():
 
     producer = Producer()
 
+    # host data under a user-specified name prefix
     name_input = input("Enter a name to host content at: ")
     producer.run(name_input)
 
