@@ -21,6 +21,9 @@ mkdir -p ~/nlsr/log/
 # copy the appropriate nlsr configuration file to the nlsr directory
 cp /local/repository/setup/external_dn.conf ~/nlsr/nlsr.conf
 
+# copy the client code to the user's home directory
+cp /local/repository/host_data.py ~/
+
 # copy a .vimrc on each VM (provides useful remappings)
 cp /local/repository/.vimrc ~/
 
