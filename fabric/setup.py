@@ -5,8 +5,11 @@ This script handles setup for the powder-ndn profile
 from fabric import Connection
 
 
+
+pc_number = input('Enter the host pc number: ')
+
 # set up ssh addresses
-ADDRESS_BEGINNING = 'pc06-fortvm-'
+ADDRESS_BEGINNING = f'pc{pc_number}-fortvm-'
 ADDRESS_END = '.emulab.net'
 USERNAME = 'ike091'
 
@@ -52,10 +55,28 @@ def start_ping_servers():
     run_bg(connection['internal-dn'], 'ndnpingserver /ndn/internal/ping')
 
 
+def set_latency(this_connection, interface, latency):
+    return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem delay {latency}ms')
+
+
 # start main scripting here
 
 install_dtach()
 create_faces()
 start_nlsr()
 start_ping_servers()
+
+# set latencies
+external_latency = input('Set latency to external network: ')
+set_latency(connection['up-cl'], 'eth3', external_latency)
+
+internal_latency = input('Set latency to internal network: ')
+set_latency(connection['up-cl'], 'eth3', internal_latency)
+
+# set packet loss rates 
+external_latency = input('Set latency to external network: ')
+set_latency(connection['up-cl'], 'eth3', external_latency)
+
+internal_latency = input('Set latency to internal network: ')
+set_latency(connection['up-cl'], 'eth3', internal_latency)
 

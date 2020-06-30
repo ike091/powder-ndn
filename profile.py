@@ -118,6 +118,10 @@ def create_routers(names, instantiateOn='pnode', cores=4, ram=8):
         routers[name].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/" + name + ".sh"))
         routers[name].addService(pg.Execute(shell="sh", command="/local/repository/setup/" + name + ".sh"))
 
+        # install pyndn client software
+        routers[name].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/install_ndn_client.sh"))
+        routers[name].addService(pg.Execute(shell="sh", command="/local/repository/setup/install_ndn_client.sh"))
+
     return routers
 
 
