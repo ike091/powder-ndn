@@ -48,14 +48,14 @@ class Producer():
     """Hosts data under a certain namespace"""
     def __init__(self):
         self.keyChain = KeyChain()
-        #  self.keyChain.createIdentityV2(Name("/ndn/identity"))
+        self.keyChain.createIdentityV2(Name("/ndn/identity"))
         self.isDone = False
 
 
     def run(self, namespace):
         """Starts listening for interest packets in the given namespace"""
         # Create a connection to the local forwarder over a Unix socket
-        face = Face()
+        face = Face("155.98.38.240")
 
         prefix = Name(namespace)
 

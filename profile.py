@@ -102,7 +102,7 @@ pnode.hardware_type = params.physical_host_type
 
 # create nodes on dedicated host
 routers = create_routers(names=['up-cl', 'external-dn', 'internal-dn'])
-UEs = create_UEs(count=2, prefix=1)
+UEs = create_UEs(count=1, prefix=1)
 
 # set up the UE to UP-CL connection
 LAN1 = request.LAN("LAN1")
