@@ -48,7 +48,7 @@ class Producer():
     """Hosts data under a certain namespace"""
     def __init__(self):
         self.keyChain = KeyChain()
-        self.keyChain.createIdentityV2(Name("/ndn/identity"))
+        #  self.keyChain.createIdentityV2(Name("/ndn/identity"))
         self.isDone = False
 
 
