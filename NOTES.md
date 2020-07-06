@@ -6,6 +6,7 @@
 * Experiment with ndn-traffic-generator
 * Experiment with ndn client-side libraries
 * Get NDN working over ethernet (try running nfd as root?)
+* Add dependency files (need fabric, PyNDN, JNDN)
 
 
 **Things we've learned:**

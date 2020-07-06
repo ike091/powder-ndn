@@ -2,9 +2,12 @@
 
 This repository contains code for implementing NDN (Named Data Networking) on the University of Utah's POWDER testbed.
 
-**POWDER Setup**
+**Setup**
 
 Create a POWDER profile - the provided profile (profile.py) is a good starting point.
+To run client scripts, PyNDN and JNDN must be installed. 
+These libraries can be found on the named data networking GitHub page. (https://www.github.com/named-data)
+The Python Fabric library is also required to run the automatic setup script. Install using pip.
 
 
 **NFD (Named Data Networking Forwarding Daemon):**
