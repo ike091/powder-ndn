@@ -55,7 +55,7 @@ class Producer():
     def run(self, namespace):
         """Starts listening for interest packets in the given namespace"""
         # Create a connection to the local forwarder over a Unix socket
-        face = Face("155.98.38.240")
+        face = Face("155.98.38.244")
 
         prefix = Name(namespace)
 

@@ -5,6 +5,26 @@ This script handles setup for the powder-ndn profile
 from fabric import Connection
 
 
+# setup connection addresses
+
+pc_number = input('Enter the host pc number: ')
+
+# set up ssh addresses
+ADDRESS_BEGINNING = f'pc{pc_number}-fortvm-'
+ADDRESS_END = '.emulab.net'
+USERNAME = 'ike091'
+
+HOSTS = {'UE1': '3', 
+                'up-cl': '4',
+                'external-dn': '1',
+                'internal-dn': '2'
+                }
+
+# establish connections
+connection = {}
+for host, number in HOSTS.items():
+    connection[host] = Connection(USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
+    print('Connection added to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
 
 
 def install_dtach():
@@ -67,28 +87,6 @@ def configure_network():
 def set_bandwidth(this_connection, interface, bandwidth):
     return this_connection.run(f'tc qdisc add dev {interface} root tbf rate 1mbit burst 32kbit latency 400ms')
 
-
-# setup connection addresses
-
-pc_number = input('Enter the host pc number: ')
-
-# set up ssh addresses
-ADDRESS_BEGINNING = f'pc{pc_number}-fortvm-'
-ADDRESS_END = '.emulab.net'
-USERNAME = 'ike091'
-
-HOSTS = {'UE1': '3', 
-                'UE2': '4',
-                'up-cl': '5',
-                'external-dn': '1',
-                'internal-dn': '2'
-                }
-
-# establish connections
-connection = {}
-for host, number in HOSTS.items():
-    connection[host] = Connection(USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
-    print('Connection added to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
 
 
 # setup faces, nlsr, and ping servers if user specifies 'y'
