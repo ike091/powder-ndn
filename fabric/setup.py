@@ -83,7 +83,7 @@ def configure_network():
     shape_link(connection['up-cl'], 'eth2', external_latency, external_packet_loss, 10)
 
 
-# figure out bandwidth setting
+# TODO: figure out bandwidth adjustment
 def set_bandwidth(this_connection, interface, bandwidth):
     return this_connection.run(f'tc qdisc add dev {interface} root tbf rate 1mbit burst 32kbit latency 400ms')
 
