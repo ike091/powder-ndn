@@ -60,27 +60,31 @@ def start_ping_servers():
     run_bg(connection['internal-dn'], 'ndnpingserver /ndn/internal/ping')
 
 
-def shape_link(this_connection, interface, latency, packet_loss=0, packet_loss_variation=10):
+def shape_link(this_connection, interface, latency, latency_variation=10, packet_loss=0):
     """Set packet loss and latency on a connection/interface"""
-
-    if packet_loss == '0':
-        return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem delay {latency}ms {packet_loss_variation}ms distribution normal')
+    
+    if latency == '0' and packet_loss == '0':
+        return this_connection.run(f'sudo tc qdisc del root dev {interface}')
+    elif packet_loss == '0':
+        return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem delay {latency}ms')
+    elif latency == '0':
+        return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem loss {packet_loss}%')
     else:
-        return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem loss {packet_loss}% delay {latency}ms {packet_loss_variation}ms distribution normal')
+        return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem loss {packet_loss}% delay {latency}ms {latency_variation}ms distribution normal')
 
 
 def configure_network():
     """Configure latencies and packet loss rates to internal and external networks"""
 
-    internal_latency = input('Set latency to internal network: ')
-    internal_packet_loss = input('Set packet loss to internal network: ')
+    internal_latency = input('Set latency to internal network (ms): ')
+    internal_packet_loss = input('Set packet loss percentage to internal network: ')
 
-    shape_link(connection['up-cl'], 'eth3', internal_latency, internal_packet_loss, 3)
+    shape_link(connection['up-cl'], 'eth1', internal_latency, 3, internal_packet_loss)
 
-    external_latency = input('Set latency to external network: ')
-    external_packet_loss = input('Set packet loss to external network: ')
+    external_latency = input('Set latency to external network (ms): ')
+    external_packet_loss = input('Set packet loss percentage to external network: ')
 
-    shape_link(connection['up-cl'], 'eth2', external_latency, external_packet_loss, 10)
+    shape_link(connection['up-cl'], 'eth2', external_latency, 10, external_packet_loss)
 
 
 # TODO: figure out bandwidth adjustment
@@ -92,6 +96,10 @@ def set_bandwidth(this_connection, interface, bandwidth):
 # setup faces, nlsr, and ping servers if user specifies 'y'
 if input('Is the network being set up for the first time? (y/n) ') == 'y':
     install_dtach()
+    create_faces()
+    start_nlsr()
+    start_ping_servers()
+elif input('Do any faces or routes need to be reconfigured? (y/n) ') == 'y':
     create_faces()
     start_nlsr()
     start_ping_servers()
