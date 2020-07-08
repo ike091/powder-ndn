@@ -1,37 +1,12 @@
-
-# -*- Mode:python; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
-#
-# Copyright (C) 2014 Regents of the University of California.
-# Copyright (c) 2014 Susmit Shannigrahi, Steve DiBenedetto
-#
-# Author: Jeff Thompson <jefft0@remap.ucla.edu>
-# Author Steve DiBenedetto <http://www.cs.colostate.edu/~dibenede>
-# Author Susmit Shannigrahi <http://www.cs.colostate.edu/~susmit>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# A copy of the GNU General Public License is in the file COPYING.
-
-import sys
 import time
-import argparse
 import traceback
 import random
-
+import asyncio
 from pyndn import Name
 from pyndn import Data
 from pyndn import Face
 from pyndn.security import KeyChain
+from pyndn.threadsafe_face import ThreadsafeFace
 
 
 def dump(*list):
@@ -46,10 +21,12 @@ def dump(*list):
 
 class Producer():
     """Hosts data under a certain namespace"""
-    def __init__(self):
-        self.keyChain = KeyChain()
+
+    def __init__(self, loop):
+        self._keyChain = KeyChain()
         #  self.keyChain.createIdentityV2(Name("/ndn/identity"))
-        self.isDone = False
+        self._isDone = False
+        self._loop = loop
 
 
     def run(self, namespace, face):
@@ -59,7 +36,7 @@ class Producer():
         prefix = Name(namespace)
 
         # Use the system default key chain and certificate name to sign commands.
-        face.setCommandSigningInfo(self.keyChain, self.keyChain.getDefaultCertificateName())
+        face.setCommandSigningInfo(self._keyChain, self._keyChain.getDefaultCertificateName())
 
         # Also use the default certificate name to sign Data packets.
         face.registerPrefix(prefix, self.onInterest, self.onRegisterFailed)
@@ -68,7 +45,7 @@ class Producer():
 
         # Run the event loop forever. Use a short sleep to
         # prevent the Producer from using 100% of the CPU.
-        while not self.isDone:
+        while not self._isDone:
             face.processEvents()
             time.sleep(0.01)
 
@@ -84,7 +61,7 @@ class Producer():
         hourMilliseconds = 3600 * 1000
         data.getMetaInfo().setFreshnessPeriod(hourMilliseconds)
 
-        self.keyChain.sign(data, self.keyChain.getDefaultCertificateName())
+        self._keyChain.sign(data, self._keyChain.getDefaultCertificateName())
 
         transport.send(data.wireEncode().toBuffer())
 
@@ -94,25 +71,20 @@ class Producer():
     def onRegisterFailed(self, prefix):
         """Called when forwarder can't register prefix"""
         dump("Register failed for prefix", prefix.toUri())
-        self.isDone = True
+        self._loop.stop()
 
 
 def main():
 
     producer = Producer()
+    
+    loop = asyncio.get_event_loop()
 
-    # host data at a user-specificed location
-    # TODO: troubleshoot hosting at remote forwarders
-    raw_input = input("Enter an IP address for data to be hosted at: (blank for local forwarder)") 
-    if raw_input == "":
-        ndn_face = Face()
-    else:
-        ndn_face = Face(raw_input)
+    # host data at the local forwarder
+    ndn_face = Face()
 
     # host data under a user-specified name prefix
     name_input = input("Enter a name to host content at: ")
-    producer.run(name_input, ndn_face)
+    producer.run(loop, name_input, ndn_face)
 
 
-if __name__ == '__main__':
-    main()
