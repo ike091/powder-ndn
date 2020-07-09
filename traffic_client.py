@@ -95,8 +95,8 @@ def main():
 
 
     # run until loop is shut down by the Counter
-    loop.run_forever()
     loop.create_task(update(face))
+    loop.run_forever()
     face.shutdown()
 
 
