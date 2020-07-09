@@ -24,7 +24,7 @@ class Producer():
 
     def __init__(self, loop, max_interests):
         self._keyChain = KeyChain()
-        #  self.keyChain.createIdentityV2(Name("/ndn/identity"))
+        #  self._keyChain.createIdentityV2(Name("/ndn/identity"))
         self._isDone = False
         self._loop = loop
         self._num_interests = 0

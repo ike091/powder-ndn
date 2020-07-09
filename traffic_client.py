@@ -67,15 +67,19 @@ def main():
     #  face.setCommandSigningInfo(KeyChain(), certificateName)
     #  face.registerPrefix(Name("/ndn"), onInterest, onRegisterFailed)
 
-    counter = Counter(loop, 10)
 
+    number_of_interests = 3
     name_text = input("Enter a prefix to request content from: ")
 
-    for i in range(0, 10):
+    counter = Counter(loop, number_of_interests)
+
+    for i in range(0, number_of_interests):
+
         if name_text[-1] == '/':
             name = Name(name_text + str(i))
         else:
             name = Name(name_text + '/' + str(i))
+
         dump("Express name", name.toUri())
         interest = Interest(name)
         interest.setMustBeFresh(False)

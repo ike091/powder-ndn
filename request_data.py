@@ -49,9 +49,6 @@ def main():
     udp_transport = UdpTransport()
     face = Face(udp_transport, udp_connection_info)
 
-    #  face.setCommandSigningInfo(KeyChain(), certificateName)
-    #  face.registerPrefix(Name("/ndn"), onInterest, onRegisterFailed)
-
     counter = Counter()
 
     # try to fetch from provided name
@@ -59,17 +56,9 @@ def main():
     name = Name(name_text)
     dump("Express name", name.toUri())
 
-    #  face.expressInterest(name, counter.onData, counter.onTimeout, counter.onNetworkNack)
-
     interest = Interest(name)
     interest.setMustBeFresh(False)
     face.expressInterest(interest, counter.onData, counter.onTimeout, counter.onNetworkNack)
-
-    # try to fetch anything
-    #  name2 = Name("/")
-    #  dump("Express name", name2.toUri())
-    #  face.expressInterest(name2, counter.onData, counter.onTimeout, counter.onNetworkNack)
-
 
     while counter._callbackCount < 1:
         face.processEvents()
