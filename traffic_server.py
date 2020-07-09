@@ -91,7 +91,7 @@ def main():
     producer = Producer(loop, 10)
 
     # host data at the local forwarder
-    ndn_face = Face()
+    ndn_face = ThreadsafeFace(loop)
 
     # host data under a user-specified name prefix
     name_input = input("Enter a name to host content at: ")

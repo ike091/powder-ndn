@@ -62,7 +62,7 @@ def main():
     ip_address = input("Enter an IP address to tunnel to: ")
     udp_connection_info = UdpTransport.ConnectionInfo(ip_address, 6363)
     udp_transport = UdpTransport()
-    face = Face(udp_transport, udp_connection_info)
+    face = ThreadsafeFace(loop, udp_transport, udp_connection_info)
 
     #  face.setCommandSigningInfo(KeyChain(), certificateName)
     #  face.registerPrefix(Name("/ndn"), onInterest, onRegisterFailed)
