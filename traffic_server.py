@@ -22,11 +22,14 @@ def dump(*list):
 class Producer():
     """Hosts data under a certain namespace"""
 
-    def __init__(self, loop):
+    def __init__(self, loop, max_interests):
         self._keyChain = KeyChain()
         #  self.keyChain.createIdentityV2(Name("/ndn/identity"))
         self._isDone = False
         self._loop = loop
+        self._num_interests = 0
+        # the number of interests to satisfy before shutdown of server
+        self._max_interests = max_interests
 
 
     def run(self, namespace, face):
@@ -60,12 +63,18 @@ class Producer():
 
         hourMilliseconds = 3600 * 1000
         data.getMetaInfo().setFreshnessPeriod(hourMilliseconds)
-
         self._keyChain.sign(data, self._keyChain.getDefaultCertificateName())
 
         transport.send(data.wireEncode().toBuffer())
 
         dump("Replied to:", interestName.toUri())
+
+        self._num_interests += 1
+
+        # stop loop if the required number of interests have been satisified
+        if self._num_interests >= self._max_interests:
+            self._loop.stop()
+            print(f"{self._num_interests} interests satisfied")
 
 
     def onRegisterFailed(self, prefix):
@@ -76,15 +85,22 @@ class Producer():
 
 def main():
 
-    producer = Producer()
     
     loop = asyncio.get_event_loop()
+
+    producer = Producer(loop, 10)
 
     # host data at the local forwarder
     ndn_face = Face()
 
     # host data under a user-specified name prefix
     name_input = input("Enter a name to host content at: ")
-    producer.run(loop, name_input, ndn_face)
+    producer.run(name_input, ndn_face)
+
+    
+    # run until loop is shut down by the Counter
+    loop.run_forever()
+    ndn_face.shutdown()
 
 
+main()
