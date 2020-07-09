@@ -87,10 +87,23 @@ def configure_network():
     shape_link(connection['up-cl'], 'eth2', external_latency, 10, external_packet_loss)
 
 
+def reset_network():
+    for c in connection.values():
+        c.run('nfd-stop')
+        c.run('nfd-start')
+
+
+def get_input(prompt, options):
+    input_string = input(prompt)
+    while input_string not in options:
+        print("Please enter a valid option.")
+        input_string = input(prompt)
+    return input_string
+
+
 # TODO: figure out bandwidth adjustment
 def set_bandwidth(this_connection, interface, bandwidth):
     return this_connection.run(f'tc qdisc add dev {interface} root tbf rate 1mbit burst 32kbit latency 400ms')
-
 
 
 # setup faces, nlsr, and ping servers if user specifies 'y'
@@ -109,6 +122,8 @@ elif input('Do any faces or routes need to be reconfigured? (y/n) ') == 'y':
 if input('Do you want to reconfigure packet loss and latency? (y/n) ') == 'y':
     configure_network()
 
+if input('Would you like to reset the network? (y/n) ') == 'y':
+    reset_network()
 
 for c in connection.values():
     c.close()
