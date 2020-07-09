@@ -5,6 +5,7 @@ from pyndn import Interest
 from pyndn.transport import UdpTransport
 from pyndn.security import KeyChain
 from pyndn.threadsafe_face import ThreadsafeFace
+from pyndn import Face
 
 
 def dump(*list):
@@ -61,7 +62,7 @@ def main():
     ip_address = input("Enter an IP address to tunnel to: ")
     udp_connection_info = UdpTransport.ConnectionInfo(ip_address, 6363)
     udp_transport = UdpTransport()
-    face = ThreadsafeFace(udp_transport, udp_connection_info)
+    face = Face(udp_transport, udp_connection_info)
 
     #  face.setCommandSigningInfo(KeyChain(), certificateName)
     #  face.registerPrefix(Name("/ndn"), onInterest, onRegisterFailed)
@@ -71,7 +72,10 @@ def main():
     name_text = input("Enter a prefix to request content from: ")
 
     for i in range(0, 10):
-        name = Name(name_text + str(i))
+        if name_text[-1] == '/':
+            name = Name(name_text + str(i))
+        else:
+            name = Name(name_text + '/' + str(i))
         dump("Express name", name.toUri())
         interest = Interest(name)
         interest.setMustBeFresh(False)
