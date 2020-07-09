@@ -22,24 +22,26 @@ def dump(*list):
 class Producer():
     """Hosts data under a certain namespace"""
 
-    def __init__(self, loop, max_interests):
-        self._keyChain = KeyChain()
+    def __init__(self):
+        self._key_chain = KeyChain()
         #  self._keyChain.createIdentityV2(Name("/ndn/identity"))
-        self._isDone = False
-        self._loop = loop
+        self._is_done = False
         self._num_interests = 0
         # the number of interests to satisfy before shutdown of server
-        self._max_interests = max_interests
+        self._max_interests = 0
 
 
-    def run(self, namespace, face):
+    def run(self, namespace, max_interests):
         """Starts listening for interest packets in the given namespace"""
-        # Create a connection to the local forwarder over a Unix socket
 
         prefix = Name(namespace)
+        self._max_interests = max_interests
+
+        # host data at the local forwarder
+        face = Face()
 
         # Use the system default key chain and certificate name to sign commands.
-        face.setCommandSigningInfo(self._keyChain, self._keyChain.getDefaultCertificateName())
+        face.setCommandSigningInfo(self._key_chain, self._key_chain.getDefaultCertificateName())
 
         # Also use the default certificate name to sign Data packets.
         face.registerPrefix(prefix, self.onInterest, self.onRegisterFailed)
@@ -48,9 +50,12 @@ class Producer():
 
         # Run the event loop forever. Use a short sleep to
         # prevent the Producer from using 100% of the CPU.
-        while not self._isDone:
+        while not self._is_done:
             face.processEvents()
             time.sleep(0.01)
+
+        # shutdown face when done
+        face.shutdown()
 
 
 
@@ -63,7 +68,7 @@ class Producer():
 
         hourMilliseconds = 3600 * 1000
         data.getMetaInfo().setFreshnessPeriod(hourMilliseconds)
-        self._keyChain.sign(data, self._keyChain.getDefaultCertificateName())
+        self._key_chain.sign(data, self._key_chain.getDefaultCertificateName())
 
         transport.send(data.wireEncode().toBuffer())
 
@@ -73,34 +78,23 @@ class Producer():
 
         # stop loop if the required number of interests have been satisified
         if self._num_interests >= self._max_interests:
-            self._loop.stop()
             print(f"{self._num_interests} interests satisfied")
+            self._is_done = True
 
 
     def onRegisterFailed(self, prefix):
         """Called when forwarder can't register prefix"""
         dump("Register failed for prefix", prefix.toUri())
-        self._loop.stop()
+        self._is_done = True
 
 
 def main():
 
-    
-    loop = asyncio.get_event_loop()
-
-    producer = Producer(loop, 10)
-
-    # host data at the local forwarder
-    ndn_face = ThreadsafeFace(loop)
+    producer = Producer()
 
     # host data under a user-specified name prefix
     name_input = input("Enter a name to host content at: ")
-    producer.run(name_input, ndn_face)
-
+    producer.run(name_input, 10)
     
-    # run until loop is shut down by the Counter
-    loop.run_forever()
-    ndn_face.shutdown()
-
 
 main()

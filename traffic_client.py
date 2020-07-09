@@ -50,6 +50,13 @@ class Counter():
         if self._callbackCount >= self._maxCallbackCount:
             self._loop.stop()
 
+
+async def update(face):
+    while True:
+        face.processEvents()
+        await asyncio.sleep(0.01)
+
+
 def main():
 
     # silence the warning from interest wire encode
@@ -89,6 +96,7 @@ def main():
 
     # run until loop is shut down by the Counter
     loop.run_forever()
+    loop.create_task(update(face))
     face.shutdown()
 
 
