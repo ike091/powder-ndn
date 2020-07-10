@@ -151,7 +151,7 @@ def main():
     consumer = Consumer(ip_address, verbose=True)
     consumer.send_interests(name_text, number_of_interests)
     input("Press enter to shutdown this consumer.")
-    consumer.shutdown()
+
 
 main()
 
