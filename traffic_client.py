@@ -109,13 +109,16 @@ class Consumer():
         if self._callbackCount >= self._maxCallbackCount:
             self.shutdown()
 
+
     def print_status_report(self):
+        """Prints diagnostic information."""
         print("\n----------------------------------")
         print(f"{self._interests_sent} interests sent")
         print("----------------------------------")
         print(f"{self._data_recieved} data packets recieved")
         print(f"{self._num_nacks} nacks")
         print(f"{self._num_timeouts} timeouts")
+        print("----------------------------------\n")
 
 
     async def _update(self):

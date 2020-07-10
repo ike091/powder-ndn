@@ -95,15 +95,17 @@ class Producer():
 
 
     def onRegisterFailed(self, prefix):
-        """Called when forwarder can't register prefix"""
+        """Called when forwarder can't register prefix."""
         dump("Register failed for prefix", prefix.toUri())
         self._is_done = True
 
 
     def print_status_report(self):
-        """Prints stats for this producer"""
+        """Prints statistics for this producer."""
+        print("\n----------------------------------")
         print(f"Number of interests recieved: {self._interests_recieved}")
         print(f"Number of interests satisfied: {self._interests_satisfied}")
+        print("----------------------------------\n")
 
 
 
@@ -115,6 +117,6 @@ def main():
     name_input = input("Enter a name to host content at: ")
     interests_to_satisfy = int(input("How many interests should be satisfied?: "))
     producer.run(name_input, interests_to_satisfy)
-    
+
 
 main()
