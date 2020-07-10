@@ -21,8 +21,8 @@ class Consumer():
     
     def __init__(self, ip, verbose=True):
         # the asyncio loop
-        self._loop = None
-        self._maxCallbackCount = maxCallbackCount
+        self._loop = asyncio.get_event_loop()
+        #  self._maxCallbackCount = maxCallbackCount
         self._callbackCount = 0
         # control verbosity
         self._verbose = verbose
@@ -33,6 +33,7 @@ class Consumer():
         self._data_recieved = 0
         self._num_nacks = 0
         self._num_timeouts = 0
+        print("Consumer instance created!")
 
 
     def _setup_face(self, face_type='udp', ip='127.0.0.1'):
@@ -49,11 +50,6 @@ class Consumer():
     def send_interests(self, prefix, num_interests):
         """Sends a specified number of interests to the specified prefix."""
 
-        # create asyncio loop 
-        self._loop = asyncio.get_event_loop()
-        self._loop.create_task(self._update())
-        # run until loop is shut down
-        self._loop.run_forever()
 
         for i in range(0, num_interests):
 
@@ -69,6 +65,12 @@ class Consumer():
             interest = Interest(name)
             interest.setMustBeFresh(False)
             self._face.expressInterest(interest, self.onData, self.onTimeout, self.onNetworkNack)
+
+        # create asyncio loop 
+        #  self._loop = asyncio.get_event_loop()
+        self._loop.create_task(self._update())
+        # run until loop is shut down
+        self._loop.run_forever()
 
     
     def onData(self, interest, data):
@@ -129,8 +131,6 @@ class Consumer():
 
 
 
-
-
 def main():
 
     # silence the warning from interest wire encode
@@ -142,7 +142,7 @@ def main():
     ip_address = input("Enter an IP address to tunnel to: ")
 
     # create a consumer and send interests with it
-    consumer = Consumer(ip_address, verbose=False)
+    consumer = Consumer(ip_address, verbose=True)
     consumer.send_interests(name_text, number_of_interests)
     input("Press enter to shutdown this consumer.")
     consumer.shutdown()
