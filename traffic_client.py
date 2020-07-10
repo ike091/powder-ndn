@@ -36,7 +36,7 @@ class Consumer():
         print("Consumer instance created!")
 
 
-    def _setup_face(self, face_type='udp', ip='127.0.0.1'):
+    def _setup_face(self, ip='127.0.0.1', face_type='udp'):
         """Sets up a face"""
         # set up a face that connects to a remote forwarder
         if face_type == 'udp':
@@ -67,6 +67,7 @@ class Consumer():
             interest = Interest(name)
             interest.setMustBeFresh(False)
             self._face.expressInterest(interest, self.onData, self.onTimeout, self.onNetworkNack)
+            self._interests_sent += 1
 
         # create asyncio loop 
         self._loop.create_task(self._update())
@@ -109,6 +110,7 @@ class Consumer():
             self.shutdown()
 
     def print_status_report(self):
+        print("\n----------------------------------")
         print(f"{self._interests_sent} interests sent")
         print("----------------------------------")
         print(f"{self._data_recieved} data packets recieved")
