@@ -22,11 +22,11 @@ class Consumer():
     def __init__(self, ip, verbose=True):
         # the asyncio loop
         self._loop = asyncio.get_event_loop()
-        #  self._maxCallbackCount = maxCallbackCount
-        self._callbackCount = 0
+        self._maxCallbackCount = 0
+        self._callbackCount = -1
         # control verbosity
         self._verbose = verbose
-        self._face = self._setup_face()
+        self._face = self._setup_face(ip)
 
         # keep track of a few performance metrics
         self._interests_sent = 0
@@ -50,6 +50,8 @@ class Consumer():
     def send_interests(self, prefix, num_interests):
         """Sends a specified number of interests to the specified prefix."""
 
+        self._callbackCount = 0
+        self._maxCallbackCount = num_interests
 
         for i in range(0, num_interests):
 
@@ -67,7 +69,6 @@ class Consumer():
             self._face.expressInterest(interest, self.onData, self.onTimeout, self.onNetworkNack)
 
         # create asyncio loop 
-        #  self._loop = asyncio.get_event_loop()
         self._loop.create_task(self._update())
         # run until loop is shut down
         self._loop.run_forever()
@@ -82,8 +83,8 @@ class Consumer():
             dump("Got data packet with name", data.getName().toUri())
             dump(data.getContent().toRawStr())
 
-        #  if self._callbackCount >= self._maxCallbackCount:
-            #  self._loop.stop()
+        if self._callbackCount >= self._maxCallbackCount:
+            self.shutdown()
 
 
     def onTimeout(self, interest):
@@ -93,8 +94,8 @@ class Consumer():
         if(self._verbose):
             dump("Time out for interest", interest.getName().toUri())
 
-        #  if self._callbackCount >= self._maxCallbackCount:
-            #  self._loop.stop()
+        if self._callbackCount >= self._maxCallbackCount:
+            self.shutdown()
 
 
     def onNetworkNack(self, interest, networkNack):
@@ -104,8 +105,8 @@ class Consumer():
         if(self._verbose):
             dump("Network nack for interest", interest.getName().toUri())
 
-        #  if self._callbackCount >= self._maxCallbackCount:
-            #  self._loop.stop()
+        if self._callbackCount >= self._maxCallbackCount:
+            self.shutdown()
 
     def print_status_report(self):
         print(f"{self._interests_sent} interests sent")
