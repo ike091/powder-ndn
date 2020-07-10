@@ -3,7 +3,6 @@ import asyncio
 from pyndn import Name
 from pyndn import Interest
 from pyndn.transport import UdpTransport
-from pyndn.security import KeyChain
 from pyndn.threadsafe_face import ThreadsafeFace
 from pyndn import Face
 
@@ -18,43 +17,118 @@ def dump(*list):
     
 
 
-class Counter():
+class Consumer():
     
-    def __init__(self, loop, maxCallbackCount):
-        self._loop = loop
+    def __init__(self, ip, verbose=True):
+        # the asyncio loop
+        self._loop = None
         self._maxCallbackCount = maxCallbackCount
         self._callbackCount = 0
+        # control verbosity
+        self._verbose = verbose
+        self._face = self._setup_face()
+
+        # keep track of a few performance metrics
+        self._interests_sent = 0
+        self._data_recieved = 0
+        self._num_nacks = 0
+        self._num_timeouts = 0
+
+
+    def _setup_face(self, face_type='udp', ip='127.0.0.1'):
+        """Sets up a face"""
+        # set up a face that connects to a remote forwarder
+        if face_type == 'udp':
+            udp_connection_info = UdpTransport.ConnectionInfo(ip, 6363)
+            udp_transport = UdpTransport()
+            return ThreadsafeFace(self._loop, udp_transport, udp_connection_info)
+        elif face_type == 'local':
+            return ThreadsafeFace(self._loop)
+
+
+    def send_interests(self, prefix, num_interests):
+        """Sends a specified number of interests to the specified prefix."""
+
+        # create asyncio loop 
+        self._loop = asyncio.get_event_loop()
+        self._loop.create_task(self._update())
+        # run until loop is shut down
+        self._loop.run_forever()
+
+        for i in range(0, num_interests):
+
+            # properly name interests 
+            if prefix[-1] == '/':
+                name = Name(prefix + str(i))
+            else:
+                name = Name(prefix + '/' + str(i))
+
+            if(self._verbose):
+                dump("Express name", name.toUri())
+
+            interest = Interest(name)
+            interest.setMustBeFresh(False)
+            self._face.expressInterest(interest, self.onData, self.onTimeout, self.onNetworkNack)
 
     
     def onData(self, interest, data):
+        """Called when a data packet is recieved."""
         self._callbackCount += 1
-        dump("Got data packet with name", data.getName().toUri())
-        dump(data.getContent().toRawStr())
+        self._data_recieved += 1
 
-        if self._callbackCount >= self._maxCallbackCount:
-            self._loop.stop()
+        if(self._verbose):
+            dump("Got data packet with name", data.getName().toUri())
+            dump(data.getContent().toRawStr())
+
+        #  if self._callbackCount >= self._maxCallbackCount:
+            #  self._loop.stop()
 
 
     def onTimeout(self, interest):
+        """Called when an interest packet times out."""
         self._callbackCount += 1
-        dump("Time out for interest", interest.getName().toUri())
+        self._num_timeouts += 1
+        if(self._verbose):
+            dump("Time out for interest", interest.getName().toUri())
 
-        if self._callbackCount >= self._maxCallbackCount:
-            self._loop.stop()
+        #  if self._callbackCount >= self._maxCallbackCount:
+            #  self._loop.stop()
 
 
     def onNetworkNack(self, interest, networkNack):
+        """Called when an interest packet is responded to with a nack."""
         self._callbackCount += 1
-        dump("Network nack for interest", interest.getName().toUri())
+        self._num_nacks += 1
+        if(self._verbose):
+            dump("Network nack for interest", interest.getName().toUri())
 
-        if self._callbackCount >= self._maxCallbackCount:
+        #  if self._callbackCount >= self._maxCallbackCount:
+            #  self._loop.stop()
+
+    def print_status_report(self):
+        print(f"{self._interests_sent} interests sent")
+        print("----------------------------------")
+        print(f"{self._data_recieved} data packets recieved")
+        print(f"{self._num_nacks} nacks")
+        print(f"{self._num_timeouts} timeouts")
+
+
+    async def _update(self):
+        """Updates events on the face"""
+        while True:
+            self._face.processEvents()
+            await asyncio.sleep(0.01)
+
+
+    def shutdown(self):
+        """Shuts down this particular consumer"""
+        self._face.shutdown()
+        if self._loop is not None:
             self._loop.stop()
+        self.print_status_report()
 
 
-async def update(face):
-    while True:
-        face.processEvents()
-        await asyncio.sleep(0.01)
+
 
 
 def main():
@@ -62,43 +136,16 @@ def main():
     # silence the warning from interest wire encode
     Interest.setDefaultCanBePrefix(True)
 
-    # get an event loop
-    loop = asyncio.get_event_loop()
-
-    # set up a face that connects to the remote forwarder
-    ip_address = input("Enter an IP address to tunnel to: ")
-    udp_connection_info = UdpTransport.ConnectionInfo(ip_address, 6363)
-    udp_transport = UdpTransport()
-    face = ThreadsafeFace(loop, udp_transport, udp_connection_info)
-
-    #  face.setCommandSigningInfo(KeyChain(), certificateName)
-    #  face.registerPrefix(Name("/ndn"), onInterest, onRegisterFailed)
-
-
-    number_of_interests = 3
+    # record name prefix and number of interests to send
     name_text = input("Enter a prefix to request content from: ")
+    number_of_interests = int(input("How many interests should be sent to this prefix?: "))
+    ip_address = input("Enter an IP address to tunnel to: ")
 
-    counter = Counter(loop, number_of_interests)
-
-    for i in range(0, number_of_interests):
-
-        if name_text[-1] == '/':
-            name = Name(name_text + str(i))
-        else:
-            name = Name(name_text + '/' + str(i))
-
-        dump("Express name", name.toUri())
-        interest = Interest(name)
-        interest.setMustBeFresh(False)
-        face.expressInterest(interest, counter.onData, counter.onTimeout, counter.onNetworkNack)
-
-
-
-    # run until loop is shut down by the Counter
-    loop.create_task(update(face))
-    loop.run_forever()
-    face.shutdown()
-
+    # create a consumer and send interests with it
+    consumer = Consumer(ip_address, verbose=False)
+    consumer.send_interests(name_text, number_of_interests)
+    input("Press enter to shutdown this consumer.")
+    consumer.shutdown()
 
 main()
 

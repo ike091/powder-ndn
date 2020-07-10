@@ -22,13 +22,20 @@ def dump(*list):
 class Producer():
     """Hosts data under a certain namespace"""
 
-    def __init__(self):
+    def __init__(self, verbose=True):
         self._key_chain = KeyChain()
         #  self._keyChain.createIdentityV2(Name("/ndn/identity"))
         self._is_done = False
         self._num_interests = 0
         # the number of interests to satisfy before shutdown of server
         self._max_interests = 0
+
+        # the verbosity of diagnostic information
+        self._verbose = verbose
+        
+        # keep track of various performance metrics:
+        self._interests_satisfied = 0
+        self._interests_recieved = 0
 
 
     def run(self, namespace, max_interests):
@@ -54,13 +61,16 @@ class Producer():
             face.processEvents()
             time.sleep(0.01)
 
-        # shutdown face when done
-        face.shutdown()
 
+        # print status and shutdown face when done
+        self.print_status_report()
+        face.shutdown()
 
 
     def onInterest(self, prefix, interest, transport, registeredPrefixId):
         """Called when an interest for the specified name is recieved"""
+        self._interests_recieved += 1
+
         interestName = interest.getName()
 
         data = Data(interestName)
@@ -71,8 +81,10 @@ class Producer():
         self._key_chain.sign(data, self._key_chain.getDefaultCertificateName())
 
         transport.send(data.wireEncode().toBuffer())
+        self._interests_satisfied += 1
 
-        dump("Replied to:", interestName.toUri())
+        if(self._verbose):
+            dump("Replied to:", interestName.toUri())
 
         self._num_interests += 1
 
@@ -88,13 +100,21 @@ class Producer():
         self._is_done = True
 
 
+    def print_status_report(self):
+        """Prints stats for this producer"""
+        print(f"Number of interests recieved: {self._interests_recieved}")
+        print(f"Number of interests satisfied: {self._interests_satisfied}")
+
+
+
 def main():
 
-    producer = Producer()
+    producer = Producer(verbose=True)
 
     # host data under a user-specified name prefix
     name_input = input("Enter a name to host content at: ")
-    producer.run(name_input, 10)
+    interests_to_satisfy = int(input("How many interests should be satisfied?: "))
+    producer.run(name_input, interests_to_satisfy)
     
 
 main()
