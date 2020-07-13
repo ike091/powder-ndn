@@ -148,8 +148,8 @@ def main():
 
     parser.add_argument("-p", "--prefix", help="the prefix to request data from", default="/ndn/external/test")
     parser.add_argument("-c", "--count", help="the number of interests to send", type=int, default=10)
-    parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", type=int, default="10.10.1.1")
-    parser.add_argument("-v", "--verbosity", help="increase output verbosity", type=int, action="store_true")
+    parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", default="10.10.1.1")
+    parser.add_argument("-v", "--verbosity", help="increase output verbosity", action="store_true")
 
     args = parser.parse_args()
 

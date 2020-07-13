@@ -117,7 +117,7 @@ def main():
 
     parser.add_argument("-p", "--prefix", help="the prefix to host data under", default="/ndn/external/test")
     parser.add_argument("-c", "--count", help="the number of interests to satisfy", type=int, default=10)
-    parser.add_argument("-v", "--verbosity", help="increase output verbosity", type=int, action="store_true")
+    parser.add_argument("-v", "--verbosity", help="increase output verbosity", action="store_true")
 
     args = parser.parse_args()
 
