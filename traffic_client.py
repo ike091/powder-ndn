@@ -23,6 +23,7 @@ class Consumer():
     def __init__(self, ip, verbose=False):
         # establish asyncio loop
         self._loop = asyncio.get_event_loop()
+        self._loop.set_debug(True)
 
         # set up counters so we know when consumer is finished
         self._maxCallbackCount = 0
@@ -54,29 +55,37 @@ class Consumer():
 
         print(f"Sending {num_interests} interests to {prefix}...")
 
+        # start counting callbacks
         self._callbackCount = 0
         self._maxCallbackCount = num_interests
 
-        for i in range(0, num_interests):
+        # properly name interests 
+        if prefix[-1] == '/':
+            prefix = prefix
+        else:
+            prefix = prefix + '/'
 
-            # properly name interests 
-            if prefix[-1] == '/':
-                name = Name(prefix + str(i))
-            else:
-                name = Name(prefix + '/' + str(i))
-
-            if(self._verbose):
-                dump("Express name", name.toUri())
-
-            interest = Interest(name)
-            interest.setMustBeFresh(False)
-            self._face.expressInterest(interest, self.onData, self.onTimeout, self.onNetworkNack)
-            self._interests_sent += 1
-
-        # create asyncio loop 
+        # create asyncio loop and run until explicitly shut down
         self._loop.create_task(self._update())
-        # run until loop is shut down
+        self._loop.create_task(self._send_all(prefix, num_interests))
         self._loop.run_forever()
+
+
+    async def _send_all(self, prefix, num_interests):
+        for i in range(0, num_interests):
+            self._send(prefix + str(i))
+        await asyncio.sleep(0.0001)
+
+
+    def _send(self, name):
+        """Send a singular interest."""
+        interest = Interest(name)
+        interest.setMustBeFresh(False)
+        self._face.expressInterest(interest, self.onData, self.onTimeout, self.onNetworkNack)
+        self._interests_sent += 1
+
+        if(self._verbose):
+            dump("Send interest with name", name)
 
     
     def onData(self, interest, data):
@@ -128,8 +137,9 @@ class Consumer():
     async def _update(self):
         """Updates events on the face"""
         while True:
-            self._face.processEvents()
-            await asyncio.sleep(0.01)
+            if self._face is not None:
+                self._face.processEvents()
+                await asyncio.sleep(0.01)
 
 
     def shutdown(self):
