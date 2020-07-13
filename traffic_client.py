@@ -1,4 +1,5 @@
 import time
+import argparse
 import asyncio
 from pyndn import Name
 from pyndn import Interest
@@ -19,7 +20,7 @@ def dump(*list):
 
 class Consumer():
     
-    def __init__(self, ip, verbose=True):
+    def __init__(self, ip, verbose=False):
         # the asyncio loop
         self._loop = asyncio.get_event_loop()
         self._maxCallbackCount = 0
@@ -142,14 +143,21 @@ def main():
     # silence the warning from interest wire encode
     Interest.setDefaultCanBePrefix(True)
 
-    # record name prefix and number of interests to send
-    name_text = input("Enter a prefix to request content from: ")
-    number_of_interests = int(input("How many interests should be sent to this prefix?: "))
-    ip_address = input("Enter an IP address to tunnel to: ")
+    # handle and specify arguments
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-p", "--prefix", help="the prefix to request data from", default="/ndn/external/test")
+    parser.add_argument("-c", "--count", help="the number of interests to send", type=int, default=10)
+    parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", type=int, default="10.10.1.1")
+    parser.add_argument("-v", "--verbosity", help="increase output verbosity", type=int, action="store_true")
+
+    args = parser.parse_args()
+
 
     # create a consumer and send interests with it
-    consumer = Consumer(ip_address, verbose=True)
-    consumer.send_interests(name_text, number_of_interests)
+    consumer = Consumer(args.ipaddress, verbose=args.verbosity)
+    consumer.send_interests(args.prefix, args.count)
+
     input("Press enter to shutdown this consumer.")
 
 

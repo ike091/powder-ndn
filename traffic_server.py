@@ -1,4 +1,5 @@
 import time
+import argparse
 import traceback
 import random
 import asyncio
@@ -22,7 +23,7 @@ def dump(*list):
 class Producer():
     """Hosts data under a certain namespace"""
 
-    def __init__(self, verbose=True):
+    def __init__(self, verbose=False):
         self._key_chain = KeyChain()
         #  self._keyChain.createIdentityV2(Name("/ndn/identity"))
         self._is_done = False
@@ -111,12 +112,18 @@ class Producer():
 
 def main():
 
-    producer = Producer(verbose=True)
+    # handle and specify arguments
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-p", "--prefix", help="the prefix to host data under", default="/ndn/external/test")
+    parser.add_argument("-c", "--count", help="the number of interests to satisfy", type=int, default=10)
+    parser.add_argument("-v", "--verbosity", help="increase output verbosity", type=int, action="store_true")
+
+    args = parser.parse_args()
 
     # host data under a user-specified name prefix
-    name_input = input("Enter a name to host content at: ")
-    interests_to_satisfy = int(input("How many interests should be satisfied?: "))
-    producer.run(name_input, interests_to_satisfy)
+    producer = Producer(verbose=args.verbosity)
+    producer.run(args.prefix, args.count)
 
 
 main()
