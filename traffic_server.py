@@ -38,6 +38,9 @@ class Producer():
         self._interests_satisfied = 0
         self._interests_recieved = 0
 
+        print("Producer instance created.")
+
+
 
     def run(self, namespace, max_interests):
         """Starts listening for interest packets in the given namespace"""
@@ -55,6 +58,9 @@ class Producer():
         face.registerPrefix(prefix, self.onInterest, self.onRegisterFailed)
 
         dump("Registering prefix", prefix.toUri())
+
+        print(f"Listening for interests under {namespace}.")
+        print(f"Will satisfy {max_interests} before termination.")
 
         # Run the event loop forever. Use a short sleep to
         # prevent the Producer from using 100% of the CPU.

@@ -21,35 +21,38 @@ def dump(*list):
 class Consumer():
     
     def __init__(self, ip, verbose=False):
-        # the asyncio loop
+        # establish asyncio loop
         self._loop = asyncio.get_event_loop()
+
+        # set up counters so we know when consumer is finished
         self._maxCallbackCount = 0
         self._callbackCount = -1
+
         # control verbosity
         self._verbose = verbose
+
+        # establish a local or remote face
         self._face = self._setup_face(ip)
 
-        # keep track of a few performance metrics
+        # keep track of some performance metrics
         self._interests_sent = 0
         self._data_recieved = 0
         self._num_nacks = 0
         self._num_timeouts = 0
-        print("Consumer instance created!")
+        print(f"Consumer instance created with UDP tunnel to {ip}!")
 
 
-    def _setup_face(self, ip='127.0.0.1', face_type='udp'):
-        """Sets up a face"""
-        # set up a face that connects to a remote forwarder
-        if face_type == 'udp':
-            udp_connection_info = UdpTransport.ConnectionInfo(ip, 6363)
-            udp_transport = UdpTransport()
-            return ThreadsafeFace(self._loop, udp_transport, udp_connection_info)
-        elif face_type == 'local':
-            return ThreadsafeFace(self._loop)
+    def _setup_face(self, ip):
+        """Sets up a face that connects to a remote forwarder."""
+        udp_connection_info = UdpTransport.ConnectionInfo(ip, 6363)
+        udp_transport = UdpTransport()
+        return ThreadsafeFace(self._loop, udp_transport, udp_connection_info)
 
 
     def send_interests(self, prefix, num_interests):
         """Sends a specified number of interests to the specified prefix."""
+
+        print(f"Sending {num_interests} interests to {prefix}...")
 
         self._callbackCount = 0
         self._maxCallbackCount = num_interests
