@@ -15,19 +15,18 @@ def dump(*list):
     for element in list:
         result += (element if type(element) is str else str(element)) + " "
     print(result)
-    
 
 
 class Consumer():
-    
+
     def __init__(self, ip, verbose=False):
         # establish asyncio loop
         self._loop = asyncio.get_event_loop()
         self._loop.set_debug(True)
 
         # set up counters so we know when consumer is finished
-        self._maxCallbackCount = 0
-        self._callbackCount = -1
+        self._max_callback_count = 0
+        self._callback_count = -1
 
         # control verbosity
         self._verbose = verbose
@@ -50,31 +49,31 @@ class Consumer():
         return ThreadsafeFace(self._loop, udp_transport, udp_connection_info)
 
 
-    def send_interests(self, prefix, num_interests):
+    def send_interests(self, prefix, num_interests, rate=0.00001):
         """Sends a specified number of interests to the specified prefix."""
 
         print(f"Sending {num_interests} interests to {prefix}...")
 
         # start counting callbacks
-        self._callbackCount = 0
-        self._maxCallbackCount = num_interests
+        self._callback_count = 0
+        self._max_callback_count = num_interests
 
-        # properly name interests 
-        if prefix[-1] == '/':
-            prefix = prefix
-        else:
+        # properly name interests
+        if prefix[-1] != '/':
             prefix = prefix + '/'
 
         # create asyncio loop and run until explicitly shut down
         self._loop.create_task(self._update())
-        self._loop.create_task(self._send_all(prefix, num_interests))
+        self._loop.create_task(self._send_all(prefix, num_interests, rate))
         self._loop.run_forever()
 
 
-    async def _send_all(self, prefix, num_interests):
+    async def _send_all(self, prefix, num_interests, rate):
+        """Sends a specified amount of interests with sequentially numbered names."""
         for i in range(0, num_interests):
             self._send(prefix + str(i))
-        await asyncio.sleep(0.0001)
+            # adjust interst sending rate
+            await asyncio.sleep(rate)
 
 
     def _send(self, name):
@@ -84,42 +83,42 @@ class Consumer():
         self._face.expressInterest(interest, self.onData, self.onTimeout, self.onNetworkNack)
         self._interests_sent += 1
 
-        if(self._verbose):
+        if self._verbose:
             dump("Send interest with name", name)
 
-    
+
     def onData(self, interest, data):
         """Called when a data packet is recieved."""
-        self._callbackCount += 1
+        self._callback_count += 1
         self._data_recieved += 1
 
-        if(self._verbose):
+        if self._verbose:
             dump("Got data packet with name", data.getName().toUri())
             dump(data.getContent().toRawStr())
 
-        if self._callbackCount >= self._maxCallbackCount:
+        if self._callback_count >= self._max_callback_count:
             self.shutdown()
 
 
     def onTimeout(self, interest):
         """Called when an interest packet times out."""
-        self._callbackCount += 1
+        self._callback_count += 1
         self._num_timeouts += 1
-        if(self._verbose):
+        if self._verbose:
             dump("Time out for interest", interest.getName().toUri())
 
-        if self._callbackCount >= self._maxCallbackCount:
+        if self._callback_count >= self._max_callback_count:
             self.shutdown()
 
 
     def onNetworkNack(self, interest, networkNack):
         """Called when an interest packet is responded to with a nack."""
-        self._callbackCount += 1
+        self._callback_count += 1
         self._num_nacks += 1
-        if(self._verbose):
+        if self._verbose:
             dump("Network nack for interest", interest.getName().toUri())
 
-        if self._callbackCount >= self._maxCallbackCount:
+        if self._callback_count >= self._max_callback_count:
             self.shutdown()
 
 
@@ -137,13 +136,16 @@ class Consumer():
     async def _update(self):
         """Updates events on the face"""
         while True:
-            if self._face is not None:
+            try:
                 self._face.processEvents()
                 await asyncio.sleep(0.01)
+            except AttributeError:
+                print("An AttributeError occured")
 
 
     def shutdown(self):
         """Shuts down this particular consumer"""
+        time.sleep(3)
         self._face.shutdown()
         if self._loop is not None:
             self._loop.stop()
@@ -152,6 +154,7 @@ class Consumer():
 
 
 def main():
+    """Runs a consumer with the specified properties."""
 
     # silence the warning from interest wire encode
     Interest.setDefaultCanBePrefix(True)
@@ -163,17 +166,23 @@ def main():
     parser.add_argument("-c", "--count", help="the number of interests to send", type=int, default=10)
     parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", default="10.10.1.1")
     parser.add_argument("-v", "--verbosity", help="increase output verbosity", action="store_true")
+    parser.add_argument("-r", "--rate", help="the rate at which interests are sent", default="0.00001")
 
     args = parser.parse_args()
 
 
     # create a consumer and send interests with it
     consumer = Consumer(args.ipaddress, verbose=args.verbosity)
-    consumer.send_interests(args.prefix, args.count)
+
+    try:
+        parsed_rate = float(args.rate)
+    except ValueError:
+        print("Error in parsing rate parameter, using default rate.")
+        parsed_rate = 0.00001
+
+    consumer.send_interests(args.prefix, args.count, rate=parsed_rate)
 
     input("Press enter to shutdown this consumer.")
 
 
 main()
-
-

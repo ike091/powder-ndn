@@ -11,5 +11,5 @@ git clone https://github.com/Pesa/PyNDN2 ~/PyNDN2
 cd ~/PyNDN2 && git merge remotes/origin/packet03
 pip3 install ~/PyNDN2
 
-# copy the client code to the user's home directory
-cp /local/repository/request_data.py ~/
+# copy a .vimrc on each VM (provides useful remappings)
+cp /local/repository/.vimrc ~/
