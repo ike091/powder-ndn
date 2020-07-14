@@ -145,7 +145,6 @@ class Consumer():
 
     def shutdown(self):
         """Shuts down this particular consumer"""
-        time.sleep(3)
         self._face.shutdown()
         if self._loop is not None:
             self._loop.stop()
@@ -181,8 +180,6 @@ def main():
         parsed_rate = 0.00001
 
     consumer.send_interests(args.prefix, args.count, rate=parsed_rate)
-
-    input("Press enter to shutdown this consumer.")
 
 
 main()

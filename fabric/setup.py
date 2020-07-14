@@ -79,7 +79,7 @@ def configure_network():
     internal_latency = input('Set latency to internal network (ms): ')
     internal_packet_loss = input('Set packet loss percentage to internal network: ')
 
-    shape_link(connection['up-cl'], 'eth1', internal_latency, 3, internal_packet_loss)
+    shape_link(connection['up-cl'], 'eth3', internal_latency, 3, internal_packet_loss)
 
     external_latency = input('Set latency to external network (ms): ')
     external_packet_loss = input('Set packet loss percentage to external network: ')
@@ -87,7 +87,8 @@ def configure_network():
     shape_link(connection['up-cl'], 'eth2', external_latency, 10, external_packet_loss)
 
 
-def reset_network():
+def reset_nfd():
+    """Restarts the NDN forwarding daemon."""
     for c in connection.values():
         c.run('nfd-stop')
         c.run('nfd-start')
@@ -103,6 +104,7 @@ def get_input(prompt, options):
 
 # TODO: figure out bandwidth adjustment
 def set_bandwidth(this_connection, interface, bandwidth):
+    """Sets the bandwidth of a provided interface."""
     return this_connection.run(f'tc qdisc add dev {interface} root tbf rate 1mbit burst 32kbit latency 400ms')
 
 
@@ -123,7 +125,7 @@ if input('Do you want to reconfigure packet loss and latency? (y/n) ') == 'y':
     configure_network()
 
 if input('Would you like to reset the network? (y/n) ') == 'y':
-    reset_network()
+    reset_nfd()
 
 for c in connection.values():
     c.close()
