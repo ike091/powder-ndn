@@ -39,6 +39,9 @@ class Consumer():
         self._data_recieved = 0
         self._num_nacks = 0
         self._num_timeouts = 0
+        self._elapsed_time = {}
+        self._initial_time = {}
+        self._final_time = {}
         print(f"Consumer instance created with UDP tunnel to {ip}!")
 
 
@@ -70,10 +73,17 @@ class Consumer():
 
     async def _send_all(self, prefix, num_interests, rate):
         """Sends a specified amount of interests with sequentially numbered names."""
+
+        # begin timing
+        self._initial_time['send_time'] = self._initial_time['total_time'] = time.time() 
+
+        # send a specified amount of interests
         for i in range(0, num_interests):
             self._send(prefix + str(i))
             # adjust interst sending rate
             await asyncio.sleep(rate)
+
+        self._final_time['send_time'] = time.time()
 
 
     def _send(self, name):
@@ -124,13 +134,20 @@ class Consumer():
 
     def print_status_report(self):
         """Prints diagnostic information."""
-        print("\n----------------------------------")
-        print(f"{self._interests_sent} interests sent")
-        print("----------------------------------")
+        # compute timing
+        for key, value in self._initial_time.items():
+            self._elapsed_time[key] = self._final_time[key] - self._initial_time[key]
+        
+        # print info
+        print("\n--------------------------------------------")
+        print(f"{self._interests_sent} interests sent in {self._elapsed_time['send_time']} seconds.") 
+        print("--------------------------------------------")
         print(f"{self._data_recieved} data packets recieved")
         print(f"{self._num_nacks} nacks")
         print(f"{self._num_timeouts} timeouts")
-        print("----------------------------------\n")
+        print("--------------------------------------------\n")
+        print(f"{self._elapsed_time['total_time']} seconds elapsed in total.")
+        print("\n--------------------------------------------")
 
 
     async def _update(self):
@@ -145,9 +162,10 @@ class Consumer():
 
     def shutdown(self):
         """Shuts down this particular consumer"""
-        self._face.shutdown()
+        self._final_time['total_time'] = time.time()
         if self._loop is not None:
             self._loop.stop()
+        self._face.shutdown()
         self.print_status_report()
 
 
