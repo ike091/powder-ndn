@@ -59,7 +59,7 @@ class Producer():
 
         dump("Registering prefix", prefix.toUri())
 
-        print(f"Listening for interests under {namespace}.")
+        print(f"Listening for interests under {namespace}...")
         print(f"Will satisfy {max_interests} before termination.")
 
         # Run the event loop forever. Use a short sleep to

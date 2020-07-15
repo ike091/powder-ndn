@@ -145,9 +145,10 @@ class Consumer():
         print(f"{self._data_recieved} data packets recieved")
         print(f"{self._num_nacks} nacks")
         print(f"{self._num_timeouts} timeouts")
-        print("--------------------------------------------\n")
+        print(f"Packet loss rate: {self._num_timeouts / self._interests_sent}")
+        print("--------------------------------------------")
         print(f"{self._elapsed_time['total_time']} seconds elapsed in total.")
-        print("\n--------------------------------------------")
+        print("--------------------------------------------\n")
 
 
     async def _update(self):

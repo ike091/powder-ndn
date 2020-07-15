@@ -69,9 +69,10 @@ def configure_network(internal_latency, internal_packet_loss, external_latency, 
 
 def reset_nfd():
     """Restarts the NDN forwarding daemon."""
-    for c in connection.values():
-        c.run('nfd-stop')
-        c.run('nfd-start')
+    for k, c in connection.items():
+        if k != 'UE1':
+            c.run('nfd-stop')
+            c.run('nfd-start')
 
 
 def get_input(prompt, options):
@@ -126,13 +127,13 @@ parser.add_argument("pc_number", help="the number corresponding to the pc runnin
 # network setup and reset options
 group = parser.add_mutually_exclusive_group()
 group.add_argument("-S", "--setup", help="setup the network from scratch", action="store_true")
-group.add_argument("-R", "--reset", help="reset the forwarding and routing daemons")
+group.add_argument("-R", "--reset", help="reset the forwarding and routing daemons", action="store_true")
 
 # network latency and loss parameters TODO: add bandwidth parameters
-parser.add_argument("--ipl", "--internal_loss", help="set internal packet loss rate (0.0 - 1.0)", type=parse_packet_loss, default="0")
-parser.add_argument("--epl", "--external_loss", help="set external packet loss rate (0.0 - 1.0)", type=parse_packet_loss, default="0")
-parser.add_argument("--il", "--internal_latency", help="set internal latency (ms)", metavar="INTERNAL_LATENCY", type=int, default="0", choices=range(1, 1000))
-parser.add_argument("--el", "--external_latency", help="set external latency (ms)", metavar="EXTERNAL_LATENCY", type=int, default="0", choices=range(1, 1000))
+parser.add_argument("-n", "--internal_loss", help="set internal packet loss rate (0.0 - 1.0)", type=parse_packet_loss, default="0")
+parser.add_argument("-x", "--external_loss", help="set external packet loss rate (0.0 - 1.0)", type=parse_packet_loss, default="0")
+parser.add_argument("-i", "--internal_latency", help="set internal latency (ms)", metavar="INTERNAL_LATENCY", type=int, default="0", choices=range(1, 1000))
+parser.add_argument("-e", "--external_latency", help="set external latency (ms)", metavar="EXTERNAL_LATENCY", type=int, default="0", choices=range(1, 1000))
 
 args = parser.parse_args()
 
@@ -168,7 +169,7 @@ if args.reset:
     start_ping_servers()
 
 # configure network latency and loss parameters
-configure_network(args.internal_latency, args.internal_packet_loss, args.external_latency, args.external_packet_loss)
+configure_network(args.internal_latency, args.internal_loss, args.external_latency, args.external_loss)
 
 
 for c in connection.values():
