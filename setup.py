@@ -78,10 +78,10 @@ def reset_nfd():
 def update_repositories():
     """Updates git repository on all nodes."""
     for c in connection.values():
-        c.run('cd /local/repository')
-        c.run('git stash')
-        c.run('git checkout master')
-        c.run('git pull')
+        c.run('cd /local/repository && git stash && git checkout master && git pull')
+        #  c.run('git stash')
+        #  c.run('git checkout master')
+        #  c.run('git pull')
 
 
 
@@ -102,24 +102,7 @@ def parse_packet_loss(string):
     return value
 
 
-# setup faces, nlsr, and ping servers if user specifies 'y'
-#  if input('Is the network being set up for the first time? (y/n) ') == 'y':
-    #  install_dtach()
-    #  create_faces()
-    #  start_nlsr()
-    #  start_ping_servers()
-#  elif input('Do any faces or routes need to be reconfigured? (y/n) ') == 'y':
-    #  create_faces()
-    #  start_nlsr()
-    #  start_ping_servers()
-
-
-# reconfigure packet loss and latency settings if requested
-#  if input('Do you want to reconfigure packet loss and latency? (y/n) ') == 'y':
-    #  configure_network()
-
-#  if input('Would you like to reset the network? (y/n) ') == 'y':
-    #  reset_nfd()
+# begin rest of script
 
 parser = argparse.ArgumentParser()
 
