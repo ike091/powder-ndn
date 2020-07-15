@@ -75,12 +75,14 @@ def reset_nfd():
             c.run('nfd-start')
 
 
-def get_input(prompt, options):
-    input_string = input(prompt)
-    while input_string not in options:
-        print("Please enter a valid option.")
-        input_string = input(prompt)
-    return input_string
+def update_repositories():
+    """Updates git repository on all nodes."""
+    for c in connection.values():
+        c.run('cd /local/repository')
+        c.run('git stash')
+        c.run('git checkout master')
+        c.run('git pull')
+
 
 
 # TODO: figure out bandwidth adjustment
@@ -135,6 +137,8 @@ parser.add_argument("-x", "--external_loss", help="set external packet loss rate
 parser.add_argument("-i", "--internal_latency", help="set internal latency (ms)", metavar="INTERNAL_LATENCY", type=int, default="0", choices=range(1, 1000))
 parser.add_argument("-e", "--external_latency", help="set external latency (ms)", metavar="EXTERNAL_LATENCY", type=int, default="0", choices=range(1, 1000))
 
+parser.add_argument("-u", "--update_repos", help="pull new changes into all profile repositories", action="store_true")
+
 args = parser.parse_args()
 
 # set up ssh addresses
@@ -168,8 +172,12 @@ if args.reset:
     start_nlsr()
     start_ping_servers()
 
-# configure network latency and loss parameters
-configure_network(args.internal_latency, args.internal_loss, args.external_latency, args.external_loss)
+if args.update_repos:
+    update_repositories()
+
+# configure network latency and loss parameters if specified
+if args.internal_latency != 0 or args.external_latency != 0 or args.internal_loss != 0.0 or args.external_loss != 0.0:
+    configure_network(args.internal_latency, args.internal_loss, args.external_latency, args.external_loss)
 
 
 for c in connection.values():
