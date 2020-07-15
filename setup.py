@@ -40,14 +40,14 @@ def start_ping_servers():
     run_bg(connection['internal-dn'], 'ndnpingserver /ndn/internal/ping')
 
 
-def shape_link(this_connection, interface, latency, latency_variation=10, packet_loss=0):
+def shape_link(this_connection, interface, latency, packet_loss, latency_variation=3):
     """Set packet loss and latency on a connection/interface"""
     
-    if latency == '0' and packet_loss == '0':
+    if latency == 0 and packet_loss == 0:
         return this_connection.run(f'sudo tc qdisc del root dev {interface}')
-    elif packet_loss == '0':
+    elif packet_loss == 0:
         return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem delay {latency}ms')
-    elif latency == '0':
+    elif latency == 0:
         return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem loss {packet_loss}%')
     else:
         return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem loss {packet_loss}% delay {latency}ms {latency_variation}ms distribution normal')
@@ -56,15 +56,11 @@ def shape_link(this_connection, interface, latency, latency_variation=10, packet
 def configure_network(internal_latency, internal_packet_loss, external_latency, external_packet_loss):
     """Configure latencies and packet loss rates to internal and external networks"""
 
-    #  internal_latency = input('Set latency to internal network (ms): ')
-    #  internal_packet_loss = input('Set packet loss percentage to internal network: ')
+    # note that this may need to be updated if profile topology changes
+    shape_link(connection['up-cl'], 'eth3', internal_latency, internal_packet_loss, latency_variation=3)
 
-    shape_link(connection['up-cl'], 'eth3', internal_latency, 3, internal_packet_loss)
-
-    #  external_latency = input('Set latency to external network (ms): ')
-    #  external_packet_loss = input('Set packet loss percentage to external network: ')
-
-    shape_link(connection['up-cl'], 'eth2', external_latency, 10, external_packet_loss)
+    # note that this may need to be updated if profile topology changes
+    shape_link(connection['up-cl'], 'eth2', external_latency, external_packet_loss, latency_variation=10)
 
 
 def reset_nfd():
@@ -79,10 +75,6 @@ def update_repositories():
     """Updates git repository on all nodes."""
     for c in connection.values():
         c.run('cd /local/repository && git stash && git checkout master && git pull')
-        #  c.run('git stash')
-        #  c.run('git checkout master')
-        #  c.run('git pull')
-
 
 
 # TODO: figure out bandwidth adjustment
@@ -115,10 +107,10 @@ group.add_argument("-S", "--setup", help="setup the network from scratch", actio
 group.add_argument("-R", "--reset", help="reset the forwarding and routing daemons", action="store_true")
 
 # network latency and loss parameters TODO: add bandwidth parameters
-parser.add_argument("-n", "--internal_loss", help="set internal packet loss rate (0.0 - 1.0)", type=parse_packet_loss, default="0")
-parser.add_argument("-x", "--external_loss", help="set external packet loss rate (0.0 - 1.0)", type=parse_packet_loss, default="0")
-parser.add_argument("-i", "--internal_latency", help="set internal latency (ms)", metavar="INTERNAL_LATENCY", type=int, default="0", choices=range(1, 1000))
-parser.add_argument("-e", "--external_latency", help="set external latency (ms)", metavar="EXTERNAL_LATENCY", type=int, default="0", choices=range(1, 1000))
+parser.add_argument("-n", "--internal_loss", help="set internal packet loss rate (0.0 - 1.0)", type=parse_packet_loss, default=0)
+parser.add_argument("-x", "--external_loss", help="set external packet loss rate (0.0 - 1.0)", type=parse_packet_loss, default=0)
+parser.add_argument("-i", "--internal_latency", help="set internal latency (ms)", metavar="INTERNAL_LATENCY", type=int, default=0, choices=range(1, 1000))
+parser.add_argument("-e", "--external_latency", help="set external latency (ms)", metavar="EXTERNAL_LATENCY", type=int, default=0, choices=range(1, 1000))
 
 parser.add_argument("-u", "--update_repos", help="pull new changes into all profile repositories", action="store_true")
 
@@ -158,10 +150,16 @@ if args.reset:
 if args.update_repos:
     update_repositories()
 
+
 # configure network latency and loss parameters if specified
 if args.internal_latency != 0 or args.external_latency != 0 or args.internal_loss != 0.0 or args.external_loss != 0.0:
     configure_network(args.internal_latency, args.internal_loss, args.external_latency, args.external_loss)
+    #  print(f"Type: {type(args.internal_loss)} Value: {args.internal_loss} String: {str(args.internal_loss)}")
+    #  print(f"Type: {type(args.internal_latency)} Value: {args.internal_latency} String: {str(args.internal_latency)}")
+    #  print(f"Type: {type(args.external_loss)} Value: {args.external_loss} String: {str(args.external_loss)}")
+    #  print(f"Type: {type(args.external_latency)} Value: {args.external_latency} String: {str(args.external_latency)}")
 
 
 for c in connection.values():
     c.close()
+    print('Connection closed to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
