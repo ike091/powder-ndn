@@ -141,13 +141,14 @@ class Consumer():
         # print info
         print("\n--------------------------------------------")
         print(f"{self._interests_sent} interests sent in {self._elapsed_time['send_time']} seconds.") 
+        print(f"Send rate: {self._interests_sent / self._elapsed_time['send_time']} packets per second")
         print("--------------------------------------------")
         print(f"{self._data_recieved} data packets recieved")
         print(f"{self._num_nacks} nacks")
         print(f"{self._num_timeouts} timeouts")
-        print(f"Packet loss rate: {self._num_timeouts / self._interests_sent}")
         print("--------------------------------------------")
         print(f"{self._elapsed_time['total_time']} seconds elapsed in total.")
+        print(f"Packet loss rate: {self._num_timeouts / self._interests_sent}")
         print("--------------------------------------------\n")
 
 
@@ -170,6 +171,13 @@ class Consumer():
         self.print_status_report()
 
 
+def rate_parser(string):
+    try:
+        parsed_rate = float(string)
+    except ValueError:
+        raise argparse.ArgumentTypeError("Error in parsing rate parameter, please enter a valid one")
+    return parsed_rate
+
 
 def main():
     """Runs a consumer with the specified properties."""
@@ -184,7 +192,7 @@ def main():
     parser.add_argument("-c", "--count", help="the number of interests to send", type=int, default=10)
     parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", default="10.10.1.1")
     parser.add_argument("-v", "--verbosity", help="increase output verbosity", action="store_true")
-    parser.add_argument("-r", "--rate", help="the rate at which interests are sent", default="0.00001")
+    parser.add_argument("-r", "--rate", help="the rate at which interests are sent", type=rate_parser, default="0.00001")
 
     args = parser.parse_args()
 
@@ -192,13 +200,8 @@ def main():
     # create a consumer and send interests with it
     consumer = Consumer(args.ipaddress, verbose=args.verbosity)
 
-    try:
-        parsed_rate = float(args.rate)
-    except ValueError:
-        print("Error in parsing rate parameter, using default rate.")
-        parsed_rate = 0.00001
 
-    consumer.send_interests(args.prefix, args.count, rate=parsed_rate)
+    consumer.send_interests(args.prefix, args.count, rate=args.rate)
 
 
 main()
