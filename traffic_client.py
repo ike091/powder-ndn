@@ -76,7 +76,7 @@ class Consumer():
         """Sends a specified amount of interests with sequentially numbered names."""
 
         # begin timing
-        self._initial_time['send_time'] = self._initial_time['total_time'] = time.time() 
+        self._initial_time['send_time'] = self._initial_time['total_time'] = time.time()
 
         # send a specified amount of interests
         for i in range(0, num_interests):
@@ -106,6 +106,9 @@ class Consumer():
         if self._verbose:
             dump("Got data packet with name", data.getName().toUri())
             dump(data.getContent().toRawStr())
+
+        data_blob = data.getContent()
+        print(f"The length of this data packet was {len(data_blob)} bytes.")
 
         if self._callback_count >= self._max_callback_count:
             self.shutdown()
@@ -138,18 +141,18 @@ class Consumer():
         # compute timing
         for key, value in self._initial_time.items():
             self._elapsed_time[key] = self._final_time[key] - self._initial_time[key]
-        
+
         # print info
         print("\n--------------------------------------------")
-        print(f"{self._interests_sent} interests sent in {self._elapsed_time['send_time']} seconds.") 
-        print(f"Send rate: {self._interests_sent / self._elapsed_time['send_time']} packets per second")
+        print(f"{self._interests_sent} interests sent in {self._elapsed_time['send_time']:.5f} seconds.") 
+        print(f"Send rate: {(self._interests_sent / self._elapsed_time['send_time']):.5f} packets per second")
         print("--------------------------------------------")
         print(f"{self._data_recieved} data packets recieved")
         print(f"{self._num_nacks} nacks")
         print(f"{self._num_timeouts} timeouts")
         print("--------------------------------------------")
-        print(f"{self._elapsed_time['total_time']} seconds elapsed in total.")
-        print(f"Packet loss rate: {self._num_timeouts / self._interests_sent}")
+        print(f"{self._elapsed_time['total_time']:.5f} seconds elapsed in total.")
+        print(f"Packet loss rate: {(self._num_timeouts / self._interests_sent):.5f}")
         print("--------------------------------------------\n")
 
 

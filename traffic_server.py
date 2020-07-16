@@ -23,23 +23,28 @@ def dump(*list):
 class Producer():
     """Hosts data under a certain namespace"""
 
-    def __init__(self, verbose=False):
+    def __init__(self, data_size, verbose=False):
+        # create a KeyChain for signing data packets
         self._key_chain = KeyChain()
-        #  self._keyChain.createIdentityV2(Name("/ndn/identity"))
         self._is_done = False
         self._num_interests = 0
+        #  self._keyChain.createIdentityV2(Name("/ndn/identity"))
+
         # the number of interests to satisfy before shutdown of server
         self._max_interests = 0
 
+        # immutable byte array to use as data
+        self._byte_array = bytes(data_size)
+        self._data_size = data_size
+
         # the verbosity of diagnostic information
         self._verbose = verbose
-        
+
         # keep track of various performance metrics:
         self._interests_satisfied = 0
         self._interests_recieved = 0
 
         print("Producer instance created.")
-
 
 
     def run(self, namespace, max_interests):
@@ -81,7 +86,9 @@ class Producer():
         interestName = interest.getName()
 
         data = Data(interestName)
-        data.setContent("Hello, " + interestName.toUri())
+        # set data to a byte array of previously specified size
+        data.setContent(self._byte_array)
+        #  data.setContent("Hello, " + interestName.toUri())
 
         hourMilliseconds = 3600 * 1000
         data.getMetaInfo().setFreshnessPeriod(hourMilliseconds)
@@ -112,6 +119,8 @@ class Producer():
         print("\n----------------------------------")
         print(f"Number of interests recieved: {self._interests_recieved}")
         print(f"Number of interests satisfied: {self._interests_satisfied}")
+        print("----------------------------------")
+        print(f"{self._data_size * self._interests_satisfied} bytes of data sent.")
         print("----------------------------------\n")
 
 
@@ -124,11 +133,12 @@ def main():
     parser.add_argument("-p", "--prefix", help="the prefix to host data under", default="/ndn/external/test")
     parser.add_argument("-c", "--count", help="the number of interests to satisfy", type=int, default=10)
     parser.add_argument("-v", "--verbosity", help="increase output verbosity", action="store_true")
+    parser.add_argument("-s", "--data_size", help="set the per-packet data size in bytes", type=int, default=1000)
 
     args = parser.parse_args()
 
     # host data under a user-specified name prefix
-    producer = Producer(verbose=args.verbosity)
+    producer = Producer(args.data_size, verbose=args.verbosity)
     producer.run(args.prefix, args.count)
 
 
