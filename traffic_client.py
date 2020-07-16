@@ -40,9 +40,12 @@ class Consumer():
         self._data_recieved = 0
         self._num_nacks = 0
         self._num_timeouts = 0
+        self._data_goodput = 0
         self._elapsed_time = {}
         self._initial_time = {}
         self._final_time = {}
+        # keeps track of the whether the first data packet has been recieved
+        self._is_first_data = True
         print(f"Consumer instance created with UDP tunnel to {ip}!")
 
 
@@ -100,6 +103,11 @@ class Consumer():
 
     def onData(self, interest, data):
         """Called when a data packet is recieved."""
+
+        if self._is_first_data:
+            self._initial_time['download_time'] = time.time()
+            self._is_first_data = False
+
         self._callback_count += 1
         self._data_recieved += 1
 
@@ -107,8 +115,9 @@ class Consumer():
             dump("Got data packet with name", data.getName().toUri())
             dump(data.getContent().toRawStr())
 
-        data_blob = data.getContent()
-        print(f"The length of this data packet was {len(data_blob)} bytes.")
+
+        # add the data packet size to total goodput
+        self._data_goodput += len(data.getContent())
 
         if self._callback_count >= self._max_callback_count:
             self.shutdown()
@@ -142,22 +151,26 @@ class Consumer():
         for key, value in self._initial_time.items():
             self._elapsed_time[key] = self._final_time[key] - self._initial_time[key]
 
+        # calculate kbps
+        download_kbps = ((self._data_goodput * 8) / 1000) / self._elapsed_time['download_time']
+
         # print info
         print("\n--------------------------------------------")
-        print(f"{self._interests_sent} interests sent in {self._elapsed_time['send_time']:.5f} seconds.") 
+        print(f"{self._interests_sent} interests sent in {self._elapsed_time['send_time']:.5f} seconds.")
         print(f"Send rate: {(self._interests_sent / self._elapsed_time['send_time']):.5f} packets per second")
         print("--------------------------------------------")
         print(f"{self._data_recieved} data packets recieved")
         print(f"{self._num_nacks} nacks")
         print(f"{self._num_timeouts} timeouts")
         print("--------------------------------------------")
+        print(f"{self._data_goodput / 1000} kilobytes recieved for a download bitrate of {download_kbps} kbps")
         print(f"{self._elapsed_time['total_time']:.5f} seconds elapsed in total.")
-        print(f"Packet loss rate: {(self._num_timeouts / self._interests_sent):.5f}")
+        print(f"Packet loss rate: {((self._num_timeouts + self._num_nacks) / self._interests_sent):.5f}")
         print("--------------------------------------------\n")
 
 
     async def _update(self):
-        """Updates events on the face"""
+        """Updates events on this Consumer's face."""
         while True:
             try:
                 self._face.processEvents()
@@ -167,8 +180,8 @@ class Consumer():
 
 
     def shutdown(self):
-        """Shuts down this particular consumer"""
-        self._final_time['total_time'] = time.time()
+        """Shuts down this particular consumer and ends timing."""
+        self._final_time['download_time'] = self._final_time['total_time'] = time.time()
         if self._loop is not None:
             self._loop.stop()
         self._face.shutdown()
