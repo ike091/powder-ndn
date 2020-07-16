@@ -18,6 +18,7 @@ def dump(*list):
 
 
 class Consumer():
+    """Creates a consumer for sending interest packets."""
 
     def __init__(self, ip, verbose=False):
         # establish asyncio loop
@@ -188,7 +189,7 @@ def main():
     # handle and specify arguments
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-p", "--prefix", help="the prefix to request data from", default="/ndn/external/test")
+    parser.add_argument("-p", "--prefix", help="the prefix to request data from", action="append", default=["/ndn/external/test"])
     parser.add_argument("-c", "--count", help="the number of interests to send", type=int, default=10)
     parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", default="10.10.1.1")
     parser.add_argument("-v", "--verbosity", help="increase output verbosity", action="store_true")
@@ -196,12 +197,15 @@ def main():
 
     args = parser.parse_args()
 
+    # clean up prefix argument
+    if len(args.prefix) > 1:
+        args.prefix.pop(0)
 
-    # create a consumer and send interests with it
-    consumer = Consumer(args.ipaddress, verbose=args.verbosity)
 
-
-    consumer.send_interests(args.prefix, args.count, rate=args.rate)
+    # create a consumer and send interests with it for each prefix provided
+    for namespace in args.prefix:
+        consumer = Consumer(args.ipaddress, verbose=args.verbosity)
+        consumer.send_interests(namespace, args.count, rate=args.rate)
 
 
 main()
