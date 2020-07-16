@@ -46,6 +46,7 @@ class Consumer():
         self._final_time = {}
         # keeps track of the whether the first data packet has been recieved
         self._is_first_data = True
+
         print(f"Consumer instance created with UDP tunnel to {ip}!")
 
 
@@ -146,7 +147,7 @@ class Consumer():
 
 
     def print_status_report(self):
-        """Prints diagnostic information."""
+        """Prints performance metrics for this consumer."""
         # compute timing
         for key, value in self._initial_time.items():
             self._elapsed_time[key] = self._final_time[key] - self._initial_time[key]
