@@ -6,6 +6,7 @@ from pyndn import Interest
 from pyndn.transport import UdpTransport
 from pyndn.threadsafe_face import ThreadsafeFace
 from pyndn import Face
+import pandas as pd
 
 
 def dump(*list):
@@ -83,6 +84,7 @@ class Consumer():
 
         # begin timing
         self._initial_time['send_time'] = self._initial_time['total_time'] = time.time()
+        self._initial_time['time_to_first_byte'] = time.time()
 
         # send a specified amount of interests
         for i in range(0, num_interests):
@@ -108,7 +110,7 @@ class Consumer():
         """Called when a data packet is recieved."""
 
         if self._is_first_data:
-            self._initial_time['download_time'] = time.time()
+            self._final_time['time_to_first_byte'] = self._initial_time['download_time'] = time.time()
             self._is_first_data = False
 
         self._callback_count += 1
@@ -148,6 +150,10 @@ class Consumer():
             self.shutdown()
 
 
+    def export_dataframe(self):
+        """Exports data in a pandas dataframe for later analysis."""
+
+
     def print_status_report(self):
         """Prints performance metrics for this consumer."""
         # compute timing
@@ -156,6 +162,9 @@ class Consumer():
 
         # calculate kbps
         download_kbps = ((self._data_goodput * 8) / 1000) / self._elapsed_time['download_time']
+
+        # calculate average latency
+        average_latency = 'not implemented' # TODO
 
         # print info
         print("\n--------------------------------------------")
@@ -169,17 +178,16 @@ class Consumer():
         print(f"{self._data_goodput / 1000} kilobytes recieved for a download bitrate of {download_kbps} kbps")
         print(f"{self._elapsed_time['total_time']:.5f} seconds elapsed in total.")
         print(f"Packet loss rate: {((self._num_timeouts + self._num_nacks) / self._interests_sent):.5f}")
+        print(f"Latency to first byte: {(self._elapsed_time['time_to_first_byte'] * 1000):.5f} ms")
+        print(f"Average latency: {average_latency} ms")
         print("--------------------------------------------\n")
 
 
     async def _update(self):
         """Updates events on this Consumer's face."""
         while True:
-            try:
-                self._face.processEvents()
-                await asyncio.sleep(0.01)
-            except AttributeError:
-                print("An AttributeError occured")
+            self._face.processEvents()
+            await asyncio.sleep(0.01)
 
 
     def shutdown(self):
