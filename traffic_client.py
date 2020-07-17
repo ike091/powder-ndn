@@ -75,6 +75,8 @@ class Consumer():
         self._loop.create_task(self._send_all(prefix, num_interests, rate))
         self._loop.run_forever()
 
+        self._face.shutdown()
+
 
     async def _send_all(self, prefix, num_interests, rate):
         """Sends a specified amount of interests with sequentially numbered names."""
@@ -185,7 +187,6 @@ class Consumer():
         self._final_time['download_time'] = self._final_time['total_time'] = time.time()
         if self._loop is not None:
             self._loop.stop()
-        self._face.shutdown()
         self.print_status_report()
 
 

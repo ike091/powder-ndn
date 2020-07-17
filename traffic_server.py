@@ -82,6 +82,9 @@ class Producer():
             self._face.processEvents()
             time.sleep(0.01)
 
+        # shutdown this face - TODO: figure out why this can't be done in the self.shutdown() method
+        self._face.shutdown()
+
 
     def onInterest(self, prefix, interest, transport, registeredPrefixId):
         """Called when an interest for the specified name is recieved"""
@@ -122,7 +125,6 @@ class Producer():
     def shutdown(self):
         self._final_time['download_time'] = time.time()
         self._is_done = True
-        self._face.shutdown()
         self.print_status_report()
 
 
