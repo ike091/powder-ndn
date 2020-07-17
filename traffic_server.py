@@ -120,7 +120,7 @@ class Producer():
 
 
     def shutdown(self):
-        self._final_time['download_time']
+        self._final_time['download_time'] = time.time()
         self._is_done = True
         self._face.shutdown()
         self.print_status_report()
