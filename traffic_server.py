@@ -146,8 +146,7 @@ class Producer():
         print(f"Number of interests recieved: {self._interests_recieved}")
         print(f"Number of interests satisfied: {self._interests_satisfied}")
         print("----------------------------------")
-        print(f"Download bitrate: {download_kbps}")
-        print(f"{self._data_sent / 1000} kilobytes recieved for a bitrate of {download_kbps} kbps")
+        print(f"{self._data_sent / 1000} kilobytes sent for a bitrate of {download_kbps} kbps")
         print(f"{self._data_size * self._interests_satisfied} bytes of data sent.")
         print("----------------------------------\n")
 
