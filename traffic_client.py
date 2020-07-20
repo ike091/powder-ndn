@@ -6,6 +6,7 @@ from pyndn import Interest
 from pyndn.transport import UdpTransport
 from pyndn.threadsafe_face import ThreadsafeFace
 from pyndn import Face
+import numpy as np
 import pandas as pd
 
 
@@ -226,7 +227,6 @@ def main():
     # clean up prefix argument
     if len(args.prefix) > 1:
         args.prefix.pop(0)
-
 
     # create a consumer and send interests with it for each prefix provided
     for namespace in args.prefix:

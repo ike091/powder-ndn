@@ -8,6 +8,8 @@ from pyndn import Data
 from pyndn import Face
 from pyndn.security import KeyChain
 from pyndn.threadsafe_face import ThreadsafeFace
+import numpy as np
+import pandas as pd
 
 
 def dump(*list):
@@ -146,7 +148,8 @@ class Producer():
         print(f"Number of interests recieved: {self._interests_recieved}")
         print(f"Number of interests satisfied: {self._interests_satisfied}")
         print("----------------------------------")
-        print(f"{self._data_sent / 1000} kilobytes sent for a bitrate of {download_kbps} kbps")
+        # this probably isn't a useful metric, as the output interface will drastically throttle this
+        #  print(f"{self._data_sent / 1000} kilobytes sent for a bitrate of {download_kbps} kbps")
         print(f"{self._data_size * self._interests_satisfied} bytes of data sent.")
         print("----------------------------------\n")
 

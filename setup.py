@@ -9,7 +9,7 @@ from fabric import Connection
 
 def install_dtach():
     """Installs dtach on all connections"""
-    for c in connection.values(): 
+    for c in connection.values():
         c.run('sudo apt install dtach')
 
 
@@ -42,7 +42,7 @@ def start_ping_servers():
 
 def shape_link(this_connection, interface, latency, packet_loss, latency_variation=3):
     """Set packet loss and latency on a connection/interface"""
-    
+
     if latency == 0 and packet_loss == 0:
         return this_connection.run(f'sudo tc qdisc del root dev {interface}')
     elif packet_loss == 0:
@@ -75,6 +75,16 @@ def update_repositories():
     """Updates git repository on all nodes."""
     for c in connection.values():
         c.run('cd /local/repository && git stash && git checkout master && git pull')
+
+
+def set_caching(caching_state):
+    """Turn caching in the network on or off."""
+    for k, c in connection.items():
+        if k != 'UE1':
+            if caching_state:
+                c.run('nfdc cs config serve on')
+            else:
+                c.run('nfdc cs config serve off')
 
 
 # TODO: figure out bandwidth adjustment
@@ -112,12 +122,23 @@ parser.add_argument("-x", "--external_loss", help="set external packet loss rate
 parser.add_argument("-i", "--internal_latency", help="set internal latency (ms)", metavar="INTERNAL_LATENCY", type=int, default=0, choices=range(1, 1000))
 parser.add_argument("-e", "--external_latency", help="set external latency (ms)", metavar="EXTERNAL_LATENCY", type=int, default=0, choices=range(1, 1000))
 
+# pull from github option
 parser.add_argument("-u", "--update_repos", help="pull new changes into all profile repositories", action="store_true")
+
+# set to specify alternate ssh address
+parser.add_argument("-a", "--address", help="sets the MEB as the server location", action="store_true")
+
+# adjust network caching
+parser.add_argument("-c", "--caching", help="turn in-network caching on or off", choices=["on", "off"])
+
 
 args = parser.parse_args()
 
 # set up ssh addresses
-ADDRESS_BEGINNING = f'pc{args.pc_number}-fortvm-'
+if args.address:
+    ADDRESS_BEGINNING = f'pc{args.pc_number}-mebvm-'
+else:
+    ADDRESS_BEGINNING = f'pc{args.pc_number}-fortvm-'
 ADDRESS_END = '.emulab.net'
 USERNAME = 'ike091'
 
@@ -149,6 +170,13 @@ if args.reset:
 
 if args.update_repos:
     update_repositories()
+
+# if caching flag is specified, set accordingly
+if args.caching is not None:
+    if args.caching == "on":
+        set_caching(True)
+    else:
+        set_caching(False)
 
 
 # configure network latency and loss parameters if specified
