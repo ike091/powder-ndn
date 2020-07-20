@@ -37,6 +37,9 @@ class Consumer():
         # establish a local or remote face
         self._face = self._setup_face(ip)
 
+        # a prefix variable
+        self._prefix = ""
+
         # keep track of some performance metrics
         self._interests_sent = 0
         self._data_recieved = 0
@@ -73,16 +76,19 @@ class Consumer():
 
         # properly name interests
         if prefix[-1] != '/':
-            prefix = prefix + '/'
+            self._prefix = prefix + '/'
+        else:
+            self._prefix = prefix
+
 
         # create asyncio loop and run until explicitly shut down
         self._loop.create_task(self._update())
-        self._loop.create_task(self._send_all(prefix, num_interests, rate))
+        self._loop.create_task(self._send_all(self._prefix, num_interests, rate))
         self._loop.run_forever()
 
         self._face.shutdown()
 
-        return self.print_status_report()
+        return self.status_report()
 
 
     async def _send_all(self, prefix, num_interests, rate):
@@ -160,7 +166,7 @@ class Consumer():
         """Exports data in a pandas dataframe for later analysis."""
 
 
-    def print_status_report(self):
+    def status_report(self):
         """Prints performance metrics for this consumer and returns a pandas series."""
         # compute timing
         for key, value in self._initial_time.items():
@@ -187,14 +193,15 @@ class Consumer():
         # calculate average latency
         average_latency = 'not implemented' # TODO
 
-        data = {'data_recieved': self._data_recieved,
-                          'interests_sent': self._interests_sent,
-                          'packet_loss_rate': packet_loss,
-                          'time_to_first_byte_ms': time_to_first_byte_ms,
-                          'data_goodput_kilobytes': self._data_goodput / 1000,
-                          'bitrate_kbps': download_kbps,
-                          'num_timeouts': self._num_timeouts,
-                          'num_nacks': self._num_nacks}
+        data = {'prefix': self._prefix,
+                'data_recieved': self._data_recieved,
+                'interests_sent': self._interests_sent,
+                'packet_loss_rate': packet_loss,
+                'time_to_first_byte_ms': time_to_first_byte_ms,
+                'data_goodput_kilobytes': self._data_goodput / 1000,
+                'bitrate_kbps': download_kbps,
+                'num_timeouts': self._num_timeouts,
+                'num_nacks': self._num_nacks}
 
 
         # print info
