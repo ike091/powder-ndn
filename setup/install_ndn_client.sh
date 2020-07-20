@@ -11,5 +11,9 @@ git clone https://github.com/Pesa/PyNDN2 ~/PyNDN2
 cd ~/PyNDN2 && git merge remotes/origin/packet03
 pip3 install ~/PyNDN2
 
+# install numpy and pandas for data analysis
+cd ~/ && pip3 install numpy
+cd ~/ && pip3 install pandas
+
 # copy a .vimrc on each VM (provides useful remappings)
 cp /local/repository/.vimrc ~/
