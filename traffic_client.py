@@ -209,7 +209,7 @@ class Consumer():
         print(f"{self._data_goodput / 1000} kilobytes recieved for a download bitrate of {download_kbps} kbps")
         print(f"{self._elapsed_time['total_time']:.5f} seconds elapsed in total.")
         print(f"Packet loss rate: {packet_loss:.5f}")
-        print(f"Latency to first byte: {time_to_first_byte_ms:.5f} ms")
+        print(f"Latency to first byte: {time_to_first_byte_ms} ms")
         print(f"Average latency: {average_latency} ms")
         print("--------------------------------------------\n")
 
