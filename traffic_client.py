@@ -270,7 +270,7 @@ def main():
         # create a consumer and send interests with it for each prefix provided
         for namespace in args.prefix:
             consumer = Consumer(args.ipaddress, verbose=args.verbosity)
-            data.append(consumer.send_interests(namespace + str(i), args.count, rate=args.rate))
+            data.append(consumer.send_interests(namespace, args.count, rate=args.rate))
 
 
         time.sleep(0.25)
