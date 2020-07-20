@@ -60,7 +60,10 @@ class Consumer():
 
 
     def send_interests(self, prefix, num_interests, rate=0.00001):
-        """Sends a specified number of interests to the specified prefix."""
+        """Sends a specified number of interests to the specified prefix.
+
+        Returns a pandas series object for analysis.
+        """
 
         print(f"Sending {num_interests} interests to {prefix}...")
 
@@ -78,6 +81,8 @@ class Consumer():
         self._loop.run_forever()
 
         self._face.shutdown()
+
+        return self.print_status_report()
 
 
     async def _send_all(self, prefix, num_interests, rate):
@@ -156,16 +161,41 @@ class Consumer():
 
 
     def print_status_report(self):
-        """Prints performance metrics for this consumer."""
+        """Prints performance metrics for this consumer and returns a pandas series."""
         # compute timing
         for key, value in self._initial_time.items():
-            self._elapsed_time[key] = self._final_time[key] - self._initial_time[key]
+            if key in self._final_time:
+                self._elapsed_time[key] = self._final_time[key] - self._initial_time[key]
 
         # calculate kbps
-        download_kbps = ((self._data_goodput * 8) / 1000) / self._elapsed_time['download_time']
+        try:
+            download_kbps = ((self._data_goodput * 8) / 1000) / self._elapsed_time['download_time']
+        except KeyError:
+            print("Bitrate couldn't be calculated.")
+            download_kbps = 0
+
+        # convert from seconds to milliseconds
+        try:
+            time_to_first_byte_ms = self._elapsed_time['time_to_first_byte'] * 1000,
+        except KeyError:
+            print("Time to first byte could not be calculated.")
+            time_to_first_byte_ms = 0
+
+        # calculate packet loss
+        packet_loss = (self._num_timeouts + self._num_nacks) / self._interests_sent
 
         # calculate average latency
         average_latency = 'not implemented' # TODO
+
+        data = {'data_recieved': self._data_recieved,
+                          'interests_sent': self._interests_sent,
+                          'packet_loss_rate': packet_loss,
+                          'time_to_first_byte_ms': time_to_first_byte_ms,
+                          'data_goodput_kilobytes': self._data_goodput / 1000,
+                          'bitrate_kbps': download_kbps,
+                          'num_timeouts': self._num_timeouts,
+                          'num_nacks': self._num_nacks}
+
 
         # print info
         print("\n--------------------------------------------")
@@ -178,10 +208,12 @@ class Consumer():
         print("--------------------------------------------")
         print(f"{self._data_goodput / 1000} kilobytes recieved for a download bitrate of {download_kbps} kbps")
         print(f"{self._elapsed_time['total_time']:.5f} seconds elapsed in total.")
-        print(f"Packet loss rate: {((self._num_timeouts + self._num_nacks) / self._interests_sent):.5f}")
-        print(f"Latency to first byte: {(self._elapsed_time['time_to_first_byte'] * 1000):.5f} ms")
+        print(f"Packet loss rate: {packet_loss:.5f}")
+        print(f"Latency to first byte: {time_to_first_byte_ms:.5f} ms")
         print(f"Average latency: {average_latency} ms")
         print("--------------------------------------------\n")
+
+        return data
 
 
     async def _update(self):
@@ -196,7 +228,6 @@ class Consumer():
         self._final_time['download_time'] = self._final_time['total_time'] = time.time()
         if self._loop is not None:
             self._loop.stop()
-        self.print_status_report()
 
 
 def rate_parser(string):
@@ -221,6 +252,8 @@ def main():
     parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", default="10.10.1.1")
     parser.add_argument("-v", "--verbosity", help="increase output verbosity", action="store_true")
     parser.add_argument("-r", "--rate", help="the rate at which interests are sent", type=rate_parser, default="0.00001")
+    parser.add_argument("--repeat", help="the number of interest bursts to send", type=int, default=1)
+
 
     args = parser.parse_args()
 
@@ -228,10 +261,22 @@ def main():
     if len(args.prefix) > 1:
         args.prefix.pop(0)
 
-    # create a consumer and send interests with it for each prefix provided
-    for namespace in args.prefix:
-        consumer = Consumer(args.ipaddress, verbose=args.verbosity)
-        consumer.send_interests(namespace, args.count, rate=args.rate)
+    # create a list of dictionaries to store data in
+    data = []
+
+    # send interest burst a specified number of times
+    for i in range(0, args.repeat):
+
+        # create a consumer and send interests with it for each prefix provided
+        for namespace in args.prefix:
+            consumer = Consumer(args.ipaddress, verbose=args.verbosity)
+            data.append(consumer.send_interests(namespace + str(i), args.count, rate=args.rate))
+
+
+        time.sleep(0.25)
+
+    df = pd.DataFrame(data)
+    print(df)
 
 
 main()
