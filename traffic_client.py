@@ -22,7 +22,7 @@ def dump(*list):
 class Consumer():
     """Creates a consumer for sending interest packets."""
 
-    def __init__(self, ip, verbose=False):
+    def __init__(self, ip, verbose=0):
         # establish asyncio loop
         self._loop = asyncio.get_event_loop()
         self._loop.set_debug(True)
@@ -65,7 +65,7 @@ class Consumer():
     def send_interests(self, prefix, num_interests, rate=0.00001):
         """Sends a specified number of interests to the specified prefix.
 
-        Returns a pandas series object for analysis.
+        Returns a dictionary containing data for analysis.
         """
 
         print(f"Sending {num_interests} interests to {prefix}...")
@@ -114,7 +114,7 @@ class Consumer():
         self._face.expressInterest(interest, self.onData, self.onTimeout, self.onNetworkNack)
         self._interests_sent += 1
 
-        if self._verbose:
+        if self._verbose >= 2:
             dump("Send interest with name", name)
 
 
@@ -128,7 +128,7 @@ class Consumer():
         self._callback_count += 1
         self._data_recieved += 1
 
-        if self._verbose:
+        if self._verbose >= 2:
             dump("Got data packet with name", data.getName().toUri())
             dump(data.getContent().toRawStr())
 
@@ -144,7 +144,7 @@ class Consumer():
         """Called when an interest packet times out."""
         self._callback_count += 1
         self._num_timeouts += 1
-        if self._verbose:
+        if self._verbose >= 2:
             dump("Time out for interest", interest.getName().toUri())
 
         if self._callback_count >= self._max_callback_count:
@@ -155,19 +155,16 @@ class Consumer():
         """Called when an interest packet is responded to with a nack."""
         self._callback_count += 1
         self._num_nacks += 1
-        if self._verbose:
+        if self._verbose >= 2:
             dump("Network nack for interest", interest.getName().toUri())
 
         if self._callback_count >= self._max_callback_count:
             self.shutdown()
 
 
-    def export_dataframe(self):
-        """Exports data in a pandas dataframe for later analysis."""
-
-
     def status_report(self):
-        """Prints performance metrics for this consumer and returns a pandas series."""
+        """Returns a dictionary containing performance information, and optionally prints performance metrics for this consumer."""
+
         # compute timing
         for key, value in self._initial_time.items():
             if key in self._final_time:
@@ -182,7 +179,7 @@ class Consumer():
 
         # convert from seconds to milliseconds
         try:
-            time_to_first_byte_ms = self._elapsed_time['time_to_first_byte'] * 1000,
+            time_to_first_byte_ms = self._elapsed_time['time_to_first_byte'] * 1000
         except KeyError:
             print("Time to first byte could not be calculated.")
             time_to_first_byte_ms = 0
@@ -204,21 +201,22 @@ class Consumer():
                 'num_nacks': self._num_nacks}
 
 
-        # print info
-        print("\n--------------------------------------------")
-        print(f"{self._interests_sent} interests sent in {self._elapsed_time['send_time']:.5f} seconds.")
-        print(f"Send rate: {(self._interests_sent / self._elapsed_time['send_time']):.5f} packets per second")
-        print("--------------------------------------------")
-        print(f"{self._data_recieved} data packets recieved")
-        print(f"{self._num_nacks} nacks")
-        print(f"{self._num_timeouts} timeouts")
-        print("--------------------------------------------")
-        print(f"{self._data_goodput / 1000} kilobytes recieved for a download bitrate of {download_kbps} kbps")
-        print(f"{self._elapsed_time['total_time']:.5f} seconds elapsed in total.")
-        print(f"Packet loss rate: {packet_loss:.5f}")
-        print(f"Latency to first byte: {time_to_first_byte_ms} ms")
-        print(f"Average latency: {average_latency} ms")
-        print("--------------------------------------------\n")
+        # print info if verbositiy level 1 or higher is enabled
+        if self._verbose >= 1:
+            print("\n--------------------------------------------")
+            print(f"{self._interests_sent} interests sent in {self._elapsed_time['send_time']:.5f} seconds.")
+            print(f"Send rate: {(self._interests_sent / self._elapsed_time['send_time']):.5f} packets per second")
+            print("--------------------------------------------")
+            print(f"{self._data_recieved} data packets recieved")
+            print(f"{self._num_nacks} nacks")
+            print(f"{self._num_timeouts} timeouts")
+            print("--------------------------------------------")
+            print(f"{self._data_goodput / 1000} kilobytes recieved for a download bitrate of {download_kbps} kbps")
+            print(f"{self._elapsed_time['total_time']:.5f} seconds elapsed in total.")
+            print(f"Packet loss rate: {packet_loss:.5f}")
+            print(f"Latency to first byte: {time_to_first_byte_ms} ms")
+            print(f"Average latency: {average_latency} ms")
+            print("--------------------------------------------\n")
 
         return data
 
@@ -238,6 +236,7 @@ class Consumer():
 
 
 def rate_parser(string):
+    """Parses the rate argument."""
     try:
         parsed_rate = float(string)
     except ValueError:
@@ -257,10 +256,11 @@ def main():
     parser.add_argument("-p", "--prefix", help="the prefix to request data from", action="append", default=["/ndn/external/test"])
     parser.add_argument("-c", "--count", help="the number of interests to send", type=int, default=10)
     parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", default="10.10.1.1")
-    parser.add_argument("-v", "--verbosity", help="increase output verbosity", action="store_true")
-    parser.add_argument("-r", "--rate", help="the rate at which interests are sent", type=rate_parser, default="0.00001")
-    parser.add_argument("--repeat", help="the number of interest bursts to send", type=int, default=1)
-
+    parser.add_argument("-v", "--verbosity", help="increase output verbosity", choices=[0,1,2], type=int)
+    # TODO: add rate functionality back in if needed
+    #  parser.add_argument("-r", "--rate", help="the rate at which interests are sent", type=rate_parser, default="0.00001")
+    parser.add_argument("-r", "--repeat", help="the number of interest bursts to send", type=int, default=1)
+    parser.add_argument("-f", "--filename", help="the output file to store data to (in CSV form)")
 
     args = parser.parse_args()
 
@@ -277,12 +277,19 @@ def main():
         # create a consumer and send interests with it for each prefix provided
         for namespace in args.prefix:
             consumer = Consumer(args.ipaddress, verbose=args.verbosity)
-            data.append(consumer.send_interests(namespace, args.count, rate=args.rate))
+            #  TODO: add rate functionality back in if needed
+            data.append(consumer.send_interests(namespace, args.count))
 
 
         time.sleep(0.25)
 
+    # create dataframe from list of dictionaries
     df = pd.DataFrame(data)
+
+    # store output to file if filename option is enabled
+    if args.filename is not None:
+        df.to_csv(args.filename)
+
     print(df)
 
 
