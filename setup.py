@@ -94,13 +94,13 @@ def set_bandwidth(this_connection, interface, bandwidth):
 
 
 def parse_packet_loss(string):
-    """Properly parse packet loss float values."""
+    """Properly parse packet loss integer values."""
     try:
-        value = float(string)
+        value = int(string)
     except ValueError:
-        raise argparse.ArgumentTypeError("Please enter a packet loss rate between 0.0 and 1.0.")
-    if value > 1.0 or value < 0.0:
-        raise argparse.ArgumentTypeError("Please enter a packet loss rate between 0.0 and 1.0.")
+        raise argparse.ArgumentTypeError("Please enter a packet loss rate between 0 and 100%.")
+    if value > 100 or value < 0:
+        raise argparse.ArgumentTypeError("Please enter a packet loss rate between 0 and 100%.")
     return value
 
 
@@ -117,8 +117,8 @@ group.add_argument("-S", "--setup", help="setup the network from scratch", actio
 group.add_argument("-R", "--reset", help="reset the forwarding and routing daemons", action="store_true")
 
 # network latency and loss parameters TODO: add bandwidth parameters
-parser.add_argument("-n", "--internal_loss", help="set internal packet loss rate (0.0 - 1.0)", type=parse_packet_loss, default=0)
-parser.add_argument("-x", "--external_loss", help="set external packet loss rate (0.0 - 1.0)", type=parse_packet_loss, default=0)
+parser.add_argument("-n", "--internal_loss", help="set internal packet loss rate (0 - 100%)", type=parse_packet_loss, default=0)
+parser.add_argument("-x", "--external_loss", help="set external packet loss rate (0 - 100%)", type=parse_packet_loss, default=0)
 parser.add_argument("-i", "--internal_latency", help="set internal latency (ms)", metavar="INTERNAL_LATENCY", type=int, default=0, choices=range(1, 1000))
 parser.add_argument("-e", "--external_latency", help="set external latency (ms)", metavar="EXTERNAL_LATENCY", type=int, default=0, choices=range(1, 1000))
 

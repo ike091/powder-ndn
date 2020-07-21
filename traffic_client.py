@@ -256,7 +256,7 @@ def main():
     parser.add_argument("-p", "--prefix", help="the prefix to request data from", action="append", default=["/ndn/external/test"])
     parser.add_argument("-c", "--count", help="the number of interests to send", type=int, default=10)
     parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", default="10.10.1.1")
-    parser.add_argument("-v", "--verbosity", help="increase output verbosity", choices=[0,1,2], type=int)
+    parser.add_argument("-v", "--verbosity", help="increase output verbosity", choices=[0,1,2], type=int, default=0)
     # TODO: add rate functionality back in if needed
     #  parser.add_argument("-r", "--rate", help="the rate at which interests are sent", type=rate_parser, default="0.00001")
     parser.add_argument("-r", "--repeat", help="the number of interest bursts to send", type=int, default=1)
