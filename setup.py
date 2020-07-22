@@ -40,8 +40,31 @@ def start_ping_servers():
     run_bg(connection['internal-dn'], 'ndnpingserver /ndn/internal/ping')
 
 
-def shape_link(this_connection, interface, latency, packet_loss, latency_variation=3):
-    """Set packet loss and latency on a connection/interface"""
+def configure_network(internal_latency, internal_packet_loss, internal_bandwidth, external_latency, external_packet_loss, external_bandwidth):
+    """Configure latency, bandwidth, and packet loss rates to internal and external networks.
+
+    Note that this may need to be updated if profile topolgy changes.
+    """
+
+    #  set_latency(connection['up-cl'], "eth3", internal_latency)
+    #  set_bandwidth(connection['up-cl'], "eth3", internal_bandwidth)
+    #  set_packet_loss(connection['up-cl'], "eth3", internal_packet_loss)
+
+    #  set_latency(connection['up-cl'], "eth2", external_latency)
+    #  set_bandwidth(connection['up-cl'], "eth2", external_bandwidth)
+    #  set_packet_loss(connection['up-cl'], "eth2", external_packet_loss)
+
+    # note that this may need to be updated if profile topology changes
+    shape_link(connection['up-cl'], 'eth3', internal_latency, internal_packet_loss, bandwidth, latency_variation=3)
+
+    # note that this may need to be updated if profile topology changes
+    shape_link(connection['up-cl'], 'eth2', external_latency, external_packet_loss, bandwidth, latency_variation=10)
+
+
+def shape_link(this_connection, interface, latency, packet_loss, bandwidth, latency_variation=3):
+    """Set packet loss, bandwidth, and latency on a given connection and interface."""
+
+    # TODO: properly implement this method, bandwidth included
 
     if latency == 0 and packet_loss == 0:
         return this_connection.run(f'sudo tc qdisc del root dev {interface}')
@@ -52,15 +75,11 @@ def shape_link(this_connection, interface, latency, packet_loss, latency_variati
     else:
         return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem loss {packet_loss}% delay {latency}ms {latency_variation}ms distribution normal')
 
+    #  this_connection.run(f'sudo tc qdisc replace dev {interface} root handle 1:0 netem delay {latency}ms')
+    #  this_connection.run(f'sudo tc qdisc replace dev {interface} parent 1:0
 
-def configure_network(internal_latency, internal_packet_loss, external_latency, external_packet_loss):
-    """Configure latencies and packet loss rates to internal and external networks"""
 
-    # note that this may need to be updated if profile topology changes
-    shape_link(connection['up-cl'], 'eth3', internal_latency, internal_packet_loss, latency_variation=3)
-
-    # note that this may need to be updated if profile topology changes
-    shape_link(connection['up-cl'], 'eth2', external_latency, external_packet_loss, latency_variation=10)
+    #  return this_connection.run(f'tc qdisc add dev {interface} root tbf rate 1mbit burst 32kbit latency 400ms')
 
 
 def reset_nfd():
@@ -87,12 +106,6 @@ def set_caching(caching_state):
                 c.run('nfdc cs config serve off')
 
 
-# TODO: figure out bandwidth adjustment
-def set_bandwidth(this_connection, interface, bandwidth):
-    """Sets the bandwidth of a provided interface."""
-    return this_connection.run(f'tc qdisc add dev {interface} root tbf rate 1mbit burst 32kbit latency 400ms')
-
-
 def parse_packet_loss(string):
     """Properly parse packet loss integer values."""
     try:
@@ -116,14 +129,19 @@ group = parser.add_mutually_exclusive_group()
 group.add_argument("-S", "--setup", help="setup the network from scratch", action="store_true")
 group.add_argument("-R", "--reset", help="reset the forwarding and routing daemons", action="store_true")
 
-# network latency and loss parameters TODO: add bandwidth parameters
+# network latency and loss parameters
 parser.add_argument("-n", "--internal_loss", help="set internal packet loss rate (0 - 100%)", type=parse_packet_loss, default=0)
 parser.add_argument("-x", "--external_loss", help="set external packet loss rate (0 - 100%)", type=parse_packet_loss, default=0)
 parser.add_argument("-i", "--internal_latency", help="set internal latency (ms)", metavar="INTERNAL_LATENCY", type=int, default=0, choices=range(1, 1000))
 parser.add_argument("-e", "--external_latency", help="set external latency (ms)", metavar="EXTERNAL_LATENCY", type=int, default=0, choices=range(1, 1000))
 
+# bandwidth parameters (note that a 0 indicates no bandwidth restriction)
+parser.add_argument("-b", "--bandwidth", help="set internal and external bandwidth (mbits) - usage: -b [INTERNAL] [EXTERNAL]", type=int, default=[0, 0], nargs=2)
+
 # pull from github option
 parser.add_argument("-u", "--update_repos", help="pull new changes into all profile repositories", action="store_true")
+
+
 
 # set to specify alternate ssh address
 parser.add_argument("-a", "--address", help="sets the MEB as the server location", action="store_true")
@@ -161,8 +179,7 @@ if args.setup:
     create_faces()
     start_nlsr()
     start_ping_servers()
-
-if args.reset:
+elif args.reset:
     reset_nfd()
     create_faces()
     start_nlsr()
@@ -172,22 +189,16 @@ if args.update_repos:
     update_repositories()
 
 # if caching flag is specified, set accordingly
-if args.caching is not None:
-    if args.caching == "on":
-        set_caching(True)
-    else:
-        set_caching(False)
+if args.caching is not None and args.caching == "on":
+    set_caching(True)
+elif args.caching is not None:
+    set_caching(False)
+
+# configure network latency, loss, and bandwidth parameters
+configure_network(args.internal_latency, args.internal_loss, args.bandwidth[0], args.external_latency, args.external_loss, args.bandwidth[1])
 
 
-# configure network latency and loss parameters if specified
-if args.internal_latency != 0 or args.external_latency != 0 or args.internal_loss != 0.0 or args.external_loss != 0.0:
-    configure_network(args.internal_latency, args.internal_loss, args.external_latency, args.external_loss)
-    #  print(f"Type: {type(args.internal_loss)} Value: {args.internal_loss} String: {str(args.internal_loss)}")
-    #  print(f"Type: {type(args.internal_latency)} Value: {args.internal_latency} String: {str(args.internal_latency)}")
-    #  print(f"Type: {type(args.external_loss)} Value: {args.external_loss} String: {str(args.external_loss)}")
-    #  print(f"Type: {type(args.external_latency)} Value: {args.external_latency} String: {str(args.external_latency)}")
-
-
+# close connections when finished
 for c in connection.values():
     c.close()
     print('Connection closed to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)

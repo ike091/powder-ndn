@@ -26,6 +26,8 @@ def main():
     plt.ylabel("bitrate")
     plt.xlabel("trial #")
     plt.show()
+    #  plt.savefig("figure.png")
+
 
 
 
