@@ -130,8 +130,8 @@ group.add_argument("-S", "--setup", help="setup the network from scratch", actio
 group.add_argument("-R", "--reset", help="reset the forwarding and routing daemons", action="store_true")
 
 # network latency and loss parameters
-parser.add_argument("-n", "--internal_loss", help="set internal packet loss rate (0 - 100%)", type=parse_packet_loss, default=0)
-parser.add_argument("-x", "--external_loss", help="set external packet loss rate (0 - 100%)", type=parse_packet_loss, default=0)
+parser.add_argument("-n", "--internal_loss", help="set internal packet loss rate (0 - 100)", type=parse_packet_loss, default=0)
+parser.add_argument("-x", "--external_loss", help="set external packet loss rate (0 - 100)", type=parse_packet_loss, default=0)
 parser.add_argument("-i", "--internal_latency", help="set internal latency (ms)", metavar="INTERNAL_LATENCY", type=int, default=0, choices=range(1, 1000))
 parser.add_argument("-e", "--external_latency", help="set external latency (ms)", metavar="EXTERNAL_LATENCY", type=int, default=0, choices=range(1, 1000))
 
@@ -142,13 +142,11 @@ parser.add_argument("-b", "--bandwidth", help="set internal and external bandwid
 parser.add_argument("-u", "--update_repos", help="pull new changes into all profile repositories", action="store_true")
 
 
-
 # set to specify alternate ssh address
 parser.add_argument("-a", "--address", help="sets the MEB as the server location", action="store_true")
 
 # adjust network caching
 parser.add_argument("-c", "--caching", help="turn in-network caching on or off", choices=["on", "off"])
-
 
 args = parser.parse_args()
 
@@ -160,7 +158,7 @@ else:
 ADDRESS_END = '.emulab.net'
 USERNAME = 'ike091'
 
-HOSTS = {'UE1': '3', 
+HOSTS = {'UE1': '3',
                 'up-cl': '4',
                 'external-dn': '1',
                 'internal-dn': '2'
@@ -195,7 +193,7 @@ elif args.caching is not None:
     set_caching(False)
 
 # configure network latency, loss, and bandwidth parameters
-configure_network(args.internal_latency, args.internal_loss, args.bandwidth[0], args.external_latency, args.external_loss, args.bandwidth[1])
+#  configure_network(args.internal_latency, args.internal_loss, args.bandwidth[0], args.external_latency, args.external_loss, args.bandwidth[1])
 
 
 # close connections when finished

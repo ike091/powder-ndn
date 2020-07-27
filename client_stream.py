@@ -199,9 +199,9 @@ class Consumer():
 
         # add data to log
         self._data.append(data)
+        print("data appended")
 
-
-        return data
+        #  return data
 
 
     async def _update(self):
@@ -268,7 +268,7 @@ def main():
     if args.filename is not None:
         i = 0
         for dataframe in final_data:
-            dataframe.to_csv(args.filename + '_' + args.prefix[i].replace('/', '-'))
+            dataframe.to_csv(args.filename + args.prefix[i].replace('/', '-'))
             i += 1
 
     # print results to stdout
