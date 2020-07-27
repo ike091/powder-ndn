@@ -63,11 +63,6 @@ class Consumer():
         return ThreadsafeFace(self._loop, udp_transport, udp_connection_info)
 
 
-    async def _timer(self, time_to_wait):
-        await asyncio.sleep(time_to_wait)
-        self._shutdown()
-
-
     def run(self, prefix, time_to_run):
         """Runs this consumer, sending interests to the specified prefix.
 
@@ -87,10 +82,10 @@ class Consumer():
         # calculate and store performance information
         self._loop.create_task(self._compute_metrics(0.5))
         # send interest stream
-        self._loop.create_task(self._send_interests(self._prefix))
+        self._loop.create_task(self._send_interests(self._prefix, time_to_run))
 
-        # start event loop and run for time_to_run seconds
-        self._loop.run_until_complete(self._timer(time_to_run))
+        # start event loop and run until explicitly shut down
+        self._loop.run_forever()
 
         # shutdown face to forwarder
         self._face.shutdown()
@@ -99,19 +94,22 @@ class Consumer():
         return pd.DataFrame(self._data)
 
 
-    async def _send_interests(self, prefix, rate=0.00001):
+    async def _send_interests(self, prefix, send_time, rate=0.00001):
         """Sends a specified amount of interests with sequentially numbered names."""
 
         # begin timing
         self._start_time = self._initial_time = time.time()
 
-        # send interests until loop is stopped
+        # send interests for a specified amount of time
         i = 0
-        while True:
+        while time.time() - self._start_time < send_time:
             self._send(prefix + str(i))
             i += 1
-            # interst sending rate
+            # interest sending rate
             await asyncio.sleep(rate)
+
+        # shutdown consumer after finished sending interests
+        self._shutdown()
 
 
     def _send(self, name):
@@ -201,7 +199,7 @@ class Consumer():
         self._data.append(data)
         print("data appended")
 
-        #  return data
+        return data
 
 
     async def _update(self):
