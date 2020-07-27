@@ -32,9 +32,6 @@ class Producer():
         self._num_interests = 0
         #  self._keyChain.createIdentityV2(Name("/ndn/identity"))
 
-        # the number of interests to satisfy before shutdown of server
-        self._max_interests = 0
-
         # host data at the local forwarder
         self._face = Face()
 
@@ -61,11 +58,10 @@ class Producer():
         print("Producer instance created.")
 
 
-    def run(self, namespace, max_interests):
-        """Starts listening for interest packets in the given namespace"""
+    def run(self, namespace):
+        """Starts listening for interest packets in the given namespace."""
 
         prefix = Name(namespace)
-        self._max_interests = max_interests
 
         # Use the system default key chain and certificate name to sign commands.
         self._face.setCommandSigningInfo(self._key_chain, self._key_chain.getDefaultCertificateName())
@@ -76,7 +72,6 @@ class Producer():
         dump("Registering prefix", prefix.toUri())
 
         print(f"Listening for interests under {namespace}...")
-        print(f"Will satisfy {max_interests} before termination.")
 
         # Run the event loop forever. Use a short sleep to
         # prevent the Producer from using 100% of the CPU.
@@ -112,10 +107,6 @@ class Producer():
         self._interests_recieved += 1
         self._interests_satisfied += 1
         self._num_interests += 1
-
-        # stop loop if the required number of interests have been satisified
-        if self._num_interests >= self._max_interests:
-            self.shutdown()
 
 
     def onRegisterFailed(self, prefix):
@@ -161,7 +152,6 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-p", "--prefix", help="the prefix to host data under", default="/ndn/external/test")
-    parser.add_argument("-c", "--count", help="the number of interests to satisfy", type=int, default=10)
     parser.add_argument("-v", "--verbosity", help="increase output verbosity", action="store_true")
     parser.add_argument("-s", "--data_size", help="set the per-packet data size in bytes", type=int, default=1000)
 
@@ -169,7 +159,7 @@ def main():
 
     # host data under a user-specified name prefix
     producer = Producer(args.data_size, verbose=args.verbosity)
-    producer.run(args.prefix, args.count)
+    producer.run(args.prefix)
 
 
 main()

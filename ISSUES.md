@@ -2,6 +2,6 @@
 
 **TO-DO:**
 
-* Fix setup.py to properly handle zero values for latency and packet loss
+* Fix setup.py to properly handle zero values for latency and packet loss - clean up these settings in general
 * Add more timing functionality to traffic_client.py - in progress
-* Add dual-name request functionality to traffic_client.py - works, but needs improvement
+* Improve and add functionality to server_stream.py

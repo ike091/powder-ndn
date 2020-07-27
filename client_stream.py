@@ -27,10 +27,6 @@ class Consumer():
         self._loop = asyncio.get_event_loop()
         self._loop.set_debug(True)
 
-        # set up counters so we know when consumer is finished
-        self._max_callback_count = 0
-        self._callback_count = -1
-
         # control verbosity
         self._verbose = verbose
 
@@ -40,15 +36,20 @@ class Consumer():
         # a prefix variable
         self._prefix = ""
 
+        # create a list of dictionaries for storing data from this stream
+        self._data = []
+
         # keep track of some performance metrics
         self._interests_sent = 0
         self._data_recieved = 0
         self._num_nacks = 0
         self._num_timeouts = 0
         self._data_goodput = 0
-        self._elapsed_time = {}
-        self._initial_time = {}
-        self._final_time = {}
+        self._start_time = 0
+        self._time_to_first_byte = 0
+        self._initial_time = 0
+        self._final_time = 0
+
         # keeps track of the whether the first data packet has been recieved
         self._is_first_data = True
 
@@ -62,17 +63,18 @@ class Consumer():
         return ThreadsafeFace(self._loop, udp_transport, udp_connection_info)
 
 
-    def send_interests(self, prefix, num_interests, rate=0.00001):
-        """Sends a specified number of interests to the specified prefix.
+    async def _timer(self, time_to_wait):
+        await asyncio.sleep(time_to_wait)
+        self._shutdown()
 
-        Returns a dictionary containing data for analysis.
+
+    def run(self, prefix, time_to_run):
+        """Runs this consumer, sending interests to the specified prefix.
+
+        Returns a dataframe containing performance information for analysis.
         """
 
-        print(f"Sending {num_interests} interests to {prefix}...")
-
-        # start counting callbacks
-        self._callback_count = 0
-        self._max_callback_count = num_interests
+        print(f"Starting stream for {time_to_run} seconds to {prefix}...")
 
         # properly name interests
         if prefix[-1] != '/':
@@ -80,35 +82,40 @@ class Consumer():
         else:
             self._prefix = prefix
 
-
-        # create asyncio loop and run until explicitly shut down
+        # update face to recieve packets
         self._loop.create_task(self._update())
-        self._loop.create_task(self._send_all(self._prefix, num_interests, rate))
-        self._loop.run_forever()
+        # calculate and store performance information
+        self._loop.create_task(self._compute_metrics(0.5))
+        # send interest stream
+        self._loop.create_task(self._send_interests(self._prefix))
 
+        # start event loop and run for time_to_run seconds
+        self._loop.run_until_complete(self._timer(time_to_run))
+
+        # shutdown face to forwarder
         self._face.shutdown()
 
-        return self.status_report()
+        # create dataframe from list of dictionaries
+        return pd.DataFrame(self._data)
 
 
-    async def _send_all(self, prefix, num_interests, rate):
+    async def _send_interests(self, prefix, rate=0.00001):
         """Sends a specified amount of interests with sequentially numbered names."""
 
         # begin timing
-        self._initial_time['send_time'] = self._initial_time['total_time'] = time.time()
-        self._initial_time['time_to_first_byte'] = time.time()
+        self._start_time = self._initial_time = time.time()
 
-        # send a specified amount of interests
-        for i in range(0, num_interests):
+        # send interests until loop is stopped
+        i = 0
+        while True:
             self._send(prefix + str(i))
-            # adjust interst sending rate
+            i += 1
+            # interst sending rate
             await asyncio.sleep(rate)
-
-        self._final_time['send_time'] = time.time()
 
 
     def _send(self, name):
-        """Send a singular interest."""
+        """Sends a singular interest."""
         interest = Interest(name)
         interest.setMustBeFresh(False)
         self._face.expressInterest(interest, self.onData, self.onTimeout, self.onNetworkNack)
@@ -122,67 +129,54 @@ class Consumer():
         """Called when a data packet is recieved."""
 
         if self._is_first_data:
-            self._final_time['time_to_first_byte'] = self._initial_time['download_time'] = time.time()
+            self._time_to_first_byte = time.time()
             self._is_first_data = False
 
-        self._callback_count += 1
         self._data_recieved += 1
 
         if self._verbose >= 2:
             dump("Got data packet with name", data.getName().toUri())
             dump(data.getContent().toRawStr())
 
-
         # add the data packet size to total goodput
         self._data_goodput += len(data.getContent())
-
-        if self._callback_count >= self._max_callback_count:
-            self.shutdown()
 
 
     def onTimeout(self, interest):
         """Called when an interest packet times out."""
-        self._callback_count += 1
         self._num_timeouts += 1
         if self._verbose >= 2:
             dump("Time out for interest", interest.getName().toUri())
 
-        if self._callback_count >= self._max_callback_count:
-            self.shutdown()
-
 
     def onNetworkNack(self, interest, networkNack):
         """Called when an interest packet is responded to with a nack."""
-        self._callback_count += 1
         self._num_nacks += 1
         if self._verbose >= 2:
             dump("Network nack for interest", interest.getName().toUri())
 
-        if self._callback_count >= self._max_callback_count:
-            self.shutdown()
 
+    async def _compute_metrics(self, measurement_rate):
+        """Returns a dictionary containing performance information.
 
-    def status_report(self):
-        """Returns a dictionary containing performance information, and optionally prints performance metrics for this consumer."""
+        Snapshots information every measurement_rate seconds.
+        """
 
-        # compute timing
-        for key, value in self._initial_time.items():
-            if key in self._final_time:
-                self._elapsed_time[key] = self._final_time[key] - self._initial_time[key]
+        # allow other tasks to be completed
+        await asyncio.sleep(measurement_rate)
+
+        # record time for bandwidth calculation
+        self._final_time = time.time()
 
         # calculate kbps
-        try:
-            download_kbps = ((self._data_goodput * 8) / 1000) / self._elapsed_time['download_time']
-        except KeyError:
-            print("Bitrate couldn't be calculated.")
-            download_kbps = 0
+        download_kbps = (self._data_goodput / 125) / (self._final_time - self._initial_time)
 
-        # convert from seconds to milliseconds
+        # calculate time to first byte (milliseconds)
         try:
-            time_to_first_byte_ms = self._elapsed_time['time_to_first_byte'] * 1000
-        except KeyError:
+            time_to_first_byte_ms = (self._time_to_first_byte - self._start_time) * 1000
+        except:
             print("Time to first byte could not be calculated.")
-            time_to_first_byte_ms = 0
+            time_to_first_byte_ms = "not computed"
 
         # calculate packet loss
         packet_loss = (self._num_timeouts + self._num_nacks) / self._interests_sent
@@ -190,33 +184,22 @@ class Consumer():
         # calculate average latency
         average_latency = 'not implemented' # TODO
 
-        data = {'prefix': self._prefix,
-                'data_recieved': self._data_recieved,
+
+        data = {'timestamp': 'not implemented', # TODO
                 'interests_sent': self._interests_sent,
+                'data_recieved': self._data_recieved,
+                'num_timeouts': self._num_timeouts,
+                'num_nacks': self._num_nacks,
                 'packet_loss_rate': packet_loss,
                 'time_to_first_byte_ms': time_to_first_byte_ms,
                 'data_goodput_kilobytes': self._data_goodput / 1000,
                 'bitrate_kbps': download_kbps,
-                'num_timeouts': self._num_timeouts,
-                'num_nacks': self._num_nacks}
+                'average_latency': average_latency}
 
 
-        # print info if verbositiy level 1 or higher is enabled
-        if self._verbose >= 1:
-            print("\n--------------------------------------------")
-            print(f"{self._interests_sent} interests sent in {self._elapsed_time['send_time']:.5f} seconds.")
-            print(f"Send rate: {(self._interests_sent / self._elapsed_time['send_time']):.5f} packets per second")
-            print("--------------------------------------------")
-            print(f"{self._data_recieved} data packets recieved")
-            print(f"{self._num_nacks} nacks")
-            print(f"{self._num_timeouts} timeouts")
-            print("--------------------------------------------")
-            print(f"{self._data_goodput / 1000} kilobytes recieved for a download bitrate of {download_kbps} kbps")
-            print(f"{self._elapsed_time['total_time']:.5f} seconds elapsed in total.")
-            print(f"Packet loss rate: {packet_loss:.5f}")
-            print(f"Latency to first byte: {time_to_first_byte_ms} ms")
-            print(f"Average latency: {average_latency} ms")
-            print("--------------------------------------------\n")
+        # add data to log
+        self._data.append(data)
+
 
         return data
 
@@ -228,9 +211,12 @@ class Consumer():
             await asyncio.sleep(0.01)
 
 
-    def shutdown(self):
+    def _shutdown(self):
         """Shuts down this particular consumer and ends timing."""
-        self._final_time['download_time'] = self._final_time['total_time'] = time.time()
+
+        #  wait 5 seconds to allow any unrecieved interests to timeout
+        asyncio.sleep(5)
+
         if self._loop is not None:
             self._loop.stop()
 
@@ -254,13 +240,11 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-p", "--prefix", help="the prefix to request data from", action="append", default=["/ndn/external/test"])
-    parser.add_argument("-c", "--count", help="the number of interests to send", type=int, default=10)
-    parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", default="10.10.1.1")
-    parser.add_argument("-v", "--verbosity", help="increase output verbosity", choices=[0, 1, 2], type=int, default=0)
-    # TODO: add rate functionality back in if needed
-    #  parser.add_argument("-r", "--rate", help="the rate at which interests are sent", type=rate_parser, default="0.00001")
-    parser.add_argument("-r", "--repeat", help="the number of interest bursts to send", type=int, default=1)
+    parser.add_argument("-t", "--time", help="the number of seconds to run each stream for", type=int, default=10)
     parser.add_argument("-f", "--filename", help="the output file to store data to (in CSV form)")
+    parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", default="10.10.1.1")
+    #  parser.add_argument("-r", "--rate", help="the rate at which interests are sent", type=rate_parser, default="0.00001")
+    parser.add_argument("-v", "--verbosity", help="increase output verbosity", choices=[0, 1, 2], type=int, default=0)
 
     args = parser.parse_args()
 
@@ -268,29 +252,32 @@ def main():
     if len(args.prefix) > 1:
         args.prefix.pop(0)
 
-    # create a list of dictionaries to store data in
-    data = []
+    # create a list for storing dataframes
+    final_data = []
 
-    # send interest burst a specified number of times
-    for i in range(0, args.repeat):
+    # run experiment once for provided prefix
+    for namespace in args.prefix:
+        consumer = Consumer(args.ipaddress, verbose=args.verbosity)
+        #  TODO: add rate functionality back in if needed
 
-        # create a consumer and send interests with it for each prefix provided
-        for namespace in args.prefix:
-            consumer = Consumer(args.ipaddress, verbose=args.verbosity)
-            #  TODO: add rate functionality back in if needed
-            data.append(consumer.send_interests(namespace, args.count))
+        # run consumer and put output into dataframe
+        final_data.append(consumer.run(namespace, args.time))
 
-
-        time.sleep(0.25)
-
-    # create dataframe from list of dictionaries
-    df = pd.DataFrame(data)
 
     # store output to file if filename option is enabled
     if args.filename is not None:
-        df.to_csv(args.filename)
+        i = 0
+        for dataframe in final_data:
+            dataframe.to_csv(args.filename + '_' + args.prefix[i].replace('/', '-'))
+            i += 1
 
-    print(df)
+    # print results to stdout
+    for dataframe in final_data:
+        print(dataframe)
 
 
 main()
+
+# TODO list:
+#  adjust verbosity implementation
+#  revamp timing and reporting metrics
