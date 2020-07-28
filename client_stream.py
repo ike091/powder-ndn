@@ -184,8 +184,8 @@ class Consumer():
                 print("Time to first byte could not be calculated.")
                 time_to_first_byte_ms = "not computed"
 
-            # calculate packet loss
-            packet_loss = (self._num_timeouts + self._num_nacks) / self._interests_sent
+            # calculate packet loss (as a percentage)
+            packet_loss = ((self._num_timeouts + self._num_nacks) / self._interests_sent) * 100
 
             # calculate average latency
             average_latency = 'not implemented' # TODO
@@ -196,7 +196,7 @@ class Consumer():
                     'data_recieved': self._data_recieved,
                     'num_timeouts': self._num_timeouts,
                     'num_nacks': self._num_nacks,
-                    'packet_loss_rate': packet_loss,
+                    'packet_loss_percent': packet_loss,
                     'time_to_first_byte_ms': time_to_first_byte_ms,
                     'data_goodput_kilobytes': self._data_goodput / 1000,
                     'bitrate_kbps': download_kbps,
