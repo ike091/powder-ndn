@@ -25,14 +25,14 @@ class Consumer():
     def __init__(self, ip, verbose=0):
         # establish asyncio loop
         self._loop = asyncio.get_event_loop()
-        self._loop.set_debug(True)
+        #  self._loop.set_debug(True)
 
+        # set up runtime
+        self._time_to_run = 0
         # control verbosity
         self._verbose = verbose
-
         # establish a local or remote face
         self._face = self._setup_face(ip)
-
         # a prefix variable
         self._prefix = ""
 
@@ -49,6 +49,7 @@ class Consumer():
         self._time_to_first_byte = 0
         self._initial_time = 0
         self._final_time = 0
+        self._previous_goodput = 0
 
         # keeps track of the whether the first data packet has been recieved
         self._is_first_data = True
@@ -77,14 +78,18 @@ class Consumer():
         else:
             self._prefix = prefix
 
+        self._time_to_run = time_to_run
+
         # update face to recieve packets
         self._loop.create_task(self._update())
         # calculate and store performance information
         self._loop.create_task(self._compute_metrics(0.5))
         # send interest stream
         self._loop.create_task(self._send_interests(self._prefix, time_to_run))
+        # schedule shutdown
+        self._loop.create_task(self._shutdown())
 
-        # start event loop and run until explicitly shut down
+        # start event loop and run shutdown method activates
         self._loop.run_forever()
 
         # shutdown face to forwarder
@@ -107,9 +112,6 @@ class Consumer():
             i += 1
             # interest sending rate
             await asyncio.sleep(rate)
-
-        # shutdown consumer after finished sending interests
-        self._shutdown()
 
 
     def _send(self, name):
@@ -160,46 +162,49 @@ class Consumer():
         Snapshots information every measurement_rate seconds.
         """
 
-        # allow other tasks to be completed
-        await asyncio.sleep(measurement_rate)
+        while True:
 
-        # record time for bandwidth calculation
-        self._final_time = time.time()
+            # snapshot previous time and goodput
+            self._initial_time = time.time()
+            self._previous_goodput = self._data_goodput
 
-        # calculate kbps
-        download_kbps = (self._data_goodput / 125) / (self._final_time - self._initial_time)
+            # allow other tasks to be completed
+            await asyncio.sleep(measurement_rate)
 
-        # calculate time to first byte (milliseconds)
-        try:
-            time_to_first_byte_ms = (self._time_to_first_byte - self._start_time) * 1000
-        except:
-            print("Time to first byte could not be calculated.")
-            time_to_first_byte_ms = "not computed"
+            # record time for bandwidth calculation
+            self._final_time = time.time()
 
-        # calculate packet loss
-        packet_loss = (self._num_timeouts + self._num_nacks) / self._interests_sent
+            # calculate kbps
+            download_kbps = ((self._data_goodput - self._previous_goodput) / 125) / (self._final_time - self._initial_time)
 
-        # calculate average latency
-        average_latency = 'not implemented' # TODO
+            # calculate time to first byte (milliseconds)
+            try:
+                time_to_first_byte_ms = (self._time_to_first_byte - self._start_time) * 1000
+            except:
+                print("Time to first byte could not be calculated.")
+                time_to_first_byte_ms = "not computed"
 
+            # calculate packet loss
+            packet_loss = (self._num_timeouts + self._num_nacks) / self._interests_sent
 
-        data = {'timestamp': 'not implemented', # TODO
-                'interests_sent': self._interests_sent,
-                'data_recieved': self._data_recieved,
-                'num_timeouts': self._num_timeouts,
-                'num_nacks': self._num_nacks,
-                'packet_loss_rate': packet_loss,
-                'time_to_first_byte_ms': time_to_first_byte_ms,
-                'data_goodput_kilobytes': self._data_goodput / 1000,
-                'bitrate_kbps': download_kbps,
-                'average_latency': average_latency}
+            # calculate average latency
+            average_latency = 'not implemented' # TODO
 
 
-        # add data to log
-        self._data.append(data)
-        print("data appended")
+            data = {'timestamp': time.time() - self._start_time, # TODO
+                    'interests_sent': self._interests_sent,
+                    'data_recieved': self._data_recieved,
+                    'num_timeouts': self._num_timeouts,
+                    'num_nacks': self._num_nacks,
+                    'packet_loss_rate': packet_loss,
+                    'time_to_first_byte_ms': time_to_first_byte_ms,
+                    'data_goodput_kilobytes': self._data_goodput / 1000,
+                    'bitrate_kbps': download_kbps,
+                    'average_latency': average_latency}
 
-        return data
+            # add data to log
+            self._data.append(data)
+
 
 
     async def _update(self):
@@ -209,14 +214,18 @@ class Consumer():
             await asyncio.sleep(0.01)
 
 
-    def _shutdown(self):
+    async def _shutdown(self):
         """Shuts down this particular consumer and ends timing."""
 
-        #  wait 5 seconds to allow any unrecieved interests to timeout
-        asyncio.sleep(5)
+        # wait to shutdown
+        await asyncio.sleep(self._time_to_run)
+
+        # wait 5 seconds to allow any unrecieved interests to timeout
+        await asyncio.sleep(5)
 
         if self._loop is not None:
             self._loop.stop()
+
 
 
 def rate_parser(string):
@@ -279,3 +288,5 @@ main()
 # TODO list:
 #  adjust verbosity implementation
 #  revamp timing and reporting metrics
+#  fix time to first byte implementation
+#  add average latency implementation
