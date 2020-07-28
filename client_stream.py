@@ -164,6 +164,9 @@ class Consumer():
             # snapshot previous time and goodput
             self._data_goodput['previous'] = self._data_goodput['current']
             self._time['previous'] = time.time()
+            self._num_nacks['previous'] = self._num_nacks['current']
+            self._num_timeouts['previous'] = self._num_timeouts['current']
+            self._interests_sent['previous'] = self._interests_sent['current']
 
             # allow other tasks to be completed
             await asyncio.sleep(measurement_rate)
@@ -182,7 +185,7 @@ class Consumer():
                 time_to_first_byte_ms = "not computed"
 
             # calculate packet loss (as a percentage)
-            packet_loss = ((self._num_timeouts + self._num_nacks) / self._interests_sent) * 100
+            packet_loss = (((self._num_timeouts['current'] - self._num_timeouts['previous']) + (self._num_nacks['current']) - self._num_nacks['previous']) / (self._interests_sent['current'] - self._interests_sent['previous'])) * 100
 
             # calculate average latency
             average_latency = 'not implemented' # TODO
