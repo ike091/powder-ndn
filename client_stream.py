@@ -40,16 +40,13 @@ class Consumer():
         self._data = []
 
         # keep track of some performance metrics
-        self._interests_sent = 0
-        self._data_recieved = 0
-        self._num_nacks = 0
-        self._num_timeouts = 0
-        self._data_goodput = 0
-        self._start_time = 0
+        self._interests_sent = {'current': 0, 'previous': 0}
+        self._data_recieved = {'current': 0, 'previous': 0}
+        self._num_nacks = {'current': 0, 'previous': 0}
+        self._num_timeouts = {'current': 0, 'previous': 0}
+        self._time = {'current': 0, 'previous': 0, 'start': 0}
         self._time_to_first_byte = 0
-        self._initial_time = 0
-        self._final_time = 0
-        self._previous_goodput = 0
+        self._data_goodput = {'current': 0, 'previous': 0}
 
         # keeps track of the whether the first data packet has been recieved
         self._is_first_data = True
@@ -103,11 +100,11 @@ class Consumer():
         """Sends a specified amount of interests with sequentially numbered names."""
 
         # begin timing
-        self._start_time = self._initial_time = time.time()
+        self._time['current'] = self._time['start'] = time.time()
 
         # send interests for a specified amount of time
         i = 0
-        while time.time() - self._start_time < send_time:
+        while time.time() - self._time['start'] < send_time:
             self._send(prefix + str(i))
             i += 1
             # interest sending rate
@@ -119,7 +116,7 @@ class Consumer():
         interest = Interest(name)
         interest.setMustBeFresh(False)
         self._face.expressInterest(interest, self.onData, self.onTimeout, self.onNetworkNack)
-        self._interests_sent += 1
+        self._interests_sent['current'] += 1
 
         if self._verbose >= 2:
             dump("Send interest with name", name)
@@ -132,26 +129,26 @@ class Consumer():
             self._time_to_first_byte = time.time()
             self._is_first_data = False
 
-        self._data_recieved += 1
+        self._data_recieved['current'] += 1
 
         if self._verbose >= 2:
             dump("Got data packet with name", data.getName().toUri())
             dump(data.getContent().toRawStr())
 
         # add the data packet size to total goodput
-        self._data_goodput += len(data.getContent())
+        self._data_goodput['current'] += len(data.getContent())
 
 
     def onTimeout(self, interest):
         """Called when an interest packet times out."""
-        self._num_timeouts += 1
+        self._num_timeouts['current'] += 1
         if self._verbose >= 2:
             dump("Time out for interest", interest.getName().toUri())
 
 
     def onNetworkNack(self, interest, networkNack):
         """Called when an interest packet is responded to with a nack."""
-        self._num_nacks += 1
+        self._num_nacks['current'] += 1
         if self._verbose >= 2:
             dump("Network nack for interest", interest.getName().toUri())
 
@@ -165,21 +162,21 @@ class Consumer():
         while True:
 
             # snapshot previous time and goodput
-            self._initial_time = time.time()
-            self._previous_goodput = self._data_goodput
+            self._data_goodput['previous'] = self._data_goodput['current']
+            self._time['previous'] = time.time()
 
             # allow other tasks to be completed
             await asyncio.sleep(measurement_rate)
 
             # record time for bandwidth calculation
-            self._final_time = time.time()
+            self._time['current'] = time.time()
 
             # calculate kbps
-            download_kbps = ((self._data_goodput - self._previous_goodput) / 125) / (self._final_time - self._initial_time)
+            download_kbps = ((self._data_goodput['current'] - self._data_goodput['previous']) / 125) / (self._time['current'] - self._time['previous'])
 
             # calculate time to first byte (milliseconds)
             try:
-                time_to_first_byte_ms = (self._time_to_first_byte - self._start_time) * 1000
+                time_to_first_byte_ms = (self._time_to_first_byte - self._time['start']) * 1000
             except:
                 print("Time to first byte could not be calculated.")
                 time_to_first_byte_ms = "not computed"
@@ -191,11 +188,11 @@ class Consumer():
             average_latency = 'not implemented' # TODO
 
 
-            data = {'timestamp': time.time() - self._start_time, # TODO
+            data = {'timestamp': time.time() - self._time['start'], # TODO
                     'interests_sent': self._interests_sent,
-                    'data_recieved': self._data_recieved,
-                    'num_timeouts': self._num_timeouts,
-                    'num_nacks': self._num_nacks,
+                    'data_recieved': self._data_recieved['current'],
+                    'num_timeouts': self._num_timeouts['current'],
+                    'num_nacks': self._num_nacks['current'],
                     'packet_loss_percent': packet_loss,
                     'time_to_first_byte_ms': time_to_first_byte_ms,
                     'data_goodput_kilobytes': self._data_goodput / 1000,
