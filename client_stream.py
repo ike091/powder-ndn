@@ -22,6 +22,10 @@ def dump(*list):
 class Consumer():
     """Creates a consumer for sending interest packets."""
 
+    # constants for adjusting performance
+    UPDATE_TIMING = 0.001
+    SEND_RATE = 0.00001
+
     def __init__(self, ip, verbose=0):
         # establish asyncio loop
         self._loop = asyncio.get_event_loop()
@@ -96,7 +100,7 @@ class Consumer():
         return pd.DataFrame(self._data)
 
 
-    async def _send_interests(self, prefix, send_time, rate=0.00001):
+    async def _send_interests(self, prefix, send_time):
         """Sends a specified amount of interests with sequentially numbered names."""
 
         # begin timing
@@ -108,7 +112,7 @@ class Consumer():
             self._send(prefix + str(i))
             i += 1
             # interest sending rate
-            await asyncio.sleep(rate)
+            await asyncio.sleep(SEND_RATE)
 
 
     def _send(self, name):
@@ -217,7 +221,7 @@ class Consumer():
         """Updates events on this Consumer's face."""
         while True:
             self._face.processEvents()
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(UPDATE_TIMING)
 
 
     async def _shutdown(self):
