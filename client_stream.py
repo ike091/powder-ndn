@@ -192,13 +192,13 @@ class Consumer():
 
 
             data = {'timestamp': time.time() - self._time['start'], # TODO
-                    'interests_sent': self._interests_sent,
+                    'interests_sent': self._interests_sent['current'],
                     'data_recieved': self._data_recieved['current'],
                     'num_timeouts': self._num_timeouts['current'],
                     'num_nacks': self._num_nacks['current'],
                     'packet_loss_percent': packet_loss,
                     'time_to_first_byte_ms': time_to_first_byte_ms,
-                    'data_goodput_kilobytes': self._data_goodput / 1000,
+                    'data_goodput_kilobytes': self._data_goodput['current'] / 1000,
                     'bitrate_kbps': download_kbps,
                     'average_latency': average_latency}
 
