@@ -185,7 +185,13 @@ class Consumer():
                 time_to_first_byte_ms = "not computed"
 
             # calculate packet loss (as a percentage)
-            packet_loss = (((self._num_timeouts['current'] - self._num_timeouts['previous']) + (self._num_nacks['current']) - self._num_nacks['previous']) / (self._interests_sent['current'] - self._interests_sent['previous'])) * 100
+            dropped_packets = (self._num_timeouts['current'] - self._num_timeouts['previous']) + (self._num_nacks['current'] - self._num_nacks['previous'])
+            requested_packets = self._interests_sent['current'] - self._interests_sent['previous']
+
+            if requested_packets != 0:
+                packet_loss = (dropped_packets / requested_packets) * 100
+            else:
+                packet_loss = 0
 
             # calculate average latency
             average_latency = 'not implemented' # TODO
