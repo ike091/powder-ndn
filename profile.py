@@ -24,6 +24,8 @@ class GLOBALS(object):
 # define network parameters
 portal.context.defineParameter("physical_host_type", "Type of physical host (d740, d840, or d820)", portal.ParameterType.STRING, 'd740')
 
+portal.context.defineParameter("node_count", "The number of client nodes to create", portal.ParameterType.INTEGER, 1)
+
 # retrieve the values the user specifies during instantiation
 params = portal.context.bindParameters()
 
@@ -31,8 +33,12 @@ params = portal.context.bindParameters()
 if params.physical_host_type not in GLOBALS.PHYSICAL_NODE_TYPES:
     portal.context.reportError(portal.ParameterError("Invalid node type."))
 
+# check node count validity
+if params.node_count < 1 or params.node_count > 30:
+    portal.context.reportError(portal.ParameterError("Number of nodes must be between 1 and 30"))
 
-def make_VM(name, image, instantiateOn, cores, ram):
+
+def make_VM(name, image, instantiate_on, cores, ram):
     """Creates a VM with the specified parameters
 
     Returns that VM
@@ -43,11 +49,11 @@ def make_VM(name, image, instantiateOn, cores, ram):
     node.ram = ram * 1024
     node.exclusive = True
     node.routable_control_ip = True
-    node.InstantiateOn(instantiateOn)
+    node.InstantiateOn(instantiate_on)
     return node
 
 
-def create_UEs(count=2, prefix=1, instantiateOn='pnode', cores=2, ram=4):
+def create_UEs(count, instantiate_on='pnode', cores=2, ram=4, prefix=1):
     """Allocates and runs an install script on a specified number of VM UE nodes.
 
     Returns a list of nodes.
@@ -59,7 +65,13 @@ def create_UEs(count=2, prefix=1, instantiateOn='pnode', cores=2, ram=4):
 
     # create each VM
     for i in range(1, count + 1):
-        nodes.append(make_VM('node' + str(prefix) + '-' + str(i), GLOBALS.UBUNTU18_IMG, instantiateOn=instantiateOn, cores=cores, ram=ram))
+        if i <= 10:
+            nodes.append(make_VM('node' + str(prefix) + '-' + str(i), GLOBALS.UBUNTU18_IMG, instantiate_on[0], cores, ram))
+        elif i <= 20:
+            nodes.append(make_VM('node' + str(prefix) + '-' + str(i), GLOBALS.UBUNTU18_IMG, instantiate_on[1], cores, ram))
+        elif i <= 30:
+            nodes.append(make_VM('node' + str(prefix) + '-' + str(i), GLOBALS.UBUNTU18_IMG, instantiate_on[2], cores, ram))
+
 
     # run client install script on each vm to install client software
     for node in nodes:
@@ -70,7 +82,7 @@ def create_UEs(count=2, prefix=1, instantiateOn='pnode', cores=2, ram=4):
     return nodes
 
 
-def create_routers(names, instantiateOn='pnode', cores=4, ram=8):
+def create_routers(names, instantiate_on='pnode', cores=4, ram=8):
     """Allocates and runs an install script on virtualized routers.
 
     Returns a list of routers.
@@ -79,7 +91,7 @@ def create_routers(names, instantiateOn='pnode', cores=4, ram=8):
     routers = dict()
 
     for name in names:
-        routers[name] = make_VM(name, GLOBALS.UBUNTU18_IMG, instantiateOn=instantiateOn, cores=cores, ram=ram)
+        routers[name] = make_VM(name, GLOBALS.UBUNTU18_IMG, instantiate_on, cores, ram)
 
         # run base install script
         routers[name].addService(pg.Execute(shell="sh", command="chmod +x /local/repository/setup/router_install.sh"))
@@ -100,13 +112,21 @@ def create_routers(names, instantiateOn='pnode', cores=4, ram=8):
 pc = portal.Context()
 request = pc.makeRequestRSpec()
 
-# declare a dedicated VM host
+# create dedicated router host
 pnode = request.RawPC('pnode')
 pnode.hardware_type = params.physical_host_type
 
-# create nodes on dedicated host
+# can support 10 UE nodes per d740 server at 2 cores and 4 gb ram
+# create client physical hosts
+client_nodes = []
+for i in range(0, (params.node_count // 10) + 1):
+    client_nodes.append(request.RawPC('client-node-' + str(i)))
+    client_nodes[i].hardware_type = "d740"
+
+# create nodes on dedicated hosts
 routers = create_routers(names=['up-cl', 'external-dn', 'internal-dn'])
-UEs = create_UEs(count=1, prefix=1)
+UEs = create_UEs(params.node_count, instantiate_on=client_nodes)
+
 
 # set up the UE to UP-CL connection
 LAN1 = request.LAN("LAN1")
@@ -118,6 +138,7 @@ for UE in UEs:
 # set up router links
 external_dn_link = request.Link(members=[routers['up-cl'], routers['external-dn']])
 internal_dn_link = request.Link(members=[routers['up-cl'], routers['internal-dn']])
+
 
 # output request
 pc.printRequestRSpec(request)
