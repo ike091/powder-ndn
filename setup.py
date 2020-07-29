@@ -46,40 +46,20 @@ def configure_network(internal_latency, internal_packet_loss, internal_bandwidth
     Note that this may need to be updated if profile topolgy changes.
     """
 
-    #  set_latency(connection['up-cl'], "eth3", internal_latency)
-    #  set_bandwidth(connection['up-cl'], "eth3", internal_bandwidth)
-    #  set_packet_loss(connection['up-cl'], "eth3", internal_packet_loss)
-
-    #  set_latency(connection['up-cl'], "eth2", external_latency)
-    #  set_bandwidth(connection['up-cl'], "eth2", external_bandwidth)
-    #  set_packet_loss(connection['up-cl'], "eth2", external_packet_loss)
-
-    # note that this may need to be updated if profile topology changes
-    shape_link(connection['up-cl'], 'eth3', internal_latency, internal_packet_loss, bandwidth, latency_variation=3)
-
-    # note that this may need to be updated if profile topology changes
-    shape_link(connection['up-cl'], 'eth2', external_latency, external_packet_loss, bandwidth, latency_variation=10)
+    # note that these may need to be updated if profile topology changes
+    shape_link(connection['up-cl'], 'eth3', internal_latency, internal_packet_loss, internal_bandwidth, latency_variation=3)
+    shape_link(connection['up-cl'], 'eth2', external_latency, external_packet_loss, external_bandwidth, latency_variation=10)
 
 
 def shape_link(this_connection, interface, latency, packet_loss, bandwidth, latency_variation=3):
     """Set packet loss, bandwidth, and latency on a given connection and interface."""
 
-    # TODO: properly implement this method, bandwidth included
+    # TODO: fix this to work with no latency and packet loss values
 
-    if latency == 0 and packet_loss == 0:
-        return this_connection.run(f'sudo tc qdisc del root dev {interface}')
-    elif packet_loss == 0:
-        return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem delay {latency}ms')
-    elif latency == 0:
-        return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem loss {packet_loss}%')
-    else:
-        return this_connection.run(f'sudo tc qdisc replace dev {interface} root netem loss {packet_loss}% delay {latency}ms {latency_variation}ms distribution normal')
-
-    #  this_connection.run(f'sudo tc qdisc replace dev {interface} root handle 1:0 netem delay {latency}ms')
-    #  this_connection.run(f'sudo tc qdisc replace dev {interface} parent 1:0
-
-
-    #  return this_connection.run(f'tc qdisc add dev {interface} root tbf rate 1mbit burst 32kbit latency 400ms')
+    #  this_connection.run(f'sudo tc qdisc del dev {interface} root')
+    this_connection.run(f'sudo tc qdisc replace dev {interface} root handle 1: netem loss {packet_loss}% delay {latency}ms {latency_variation}ms distribution normal')
+    this_connection.run(f'sudo tc qdisc replace dev {interface} parent 1: handle 2: tbf rate {bandwidth}mbit latency 400ms burst 100mbit')
+    this_connection.run(f'sudo tc qdisc show dev {interface}')
 
 
 def reset_nfd():
@@ -192,7 +172,7 @@ elif args.caching is not None:
     set_caching(False)
 
 # configure network latency, loss, and bandwidth parameters
-#  configure_network(args.internal_latency, args.internal_loss, args.bandwidth[0], args.external_latency, args.external_loss, args.bandwidth[1])
+configure_network(args.internal_latency, args.internal_loss, args.bandwidth[0], args.external_latency, args.external_loss, args.bandwidth[1])
 
 
 # close connections when finished
