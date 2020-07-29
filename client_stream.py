@@ -181,8 +181,12 @@ class Consumer():
             # record time for bandwidth calculation
             self._time['current'] = time.time()
 
+            # calculate current goodput in kilobytes
+            data_goodput_kilobytes  = (self._data_goodput['current'] - self._data_goodput['previous']) / 1000
+
             # calculate kbps
-            download_kbps = ((self._data_goodput['current'] - self._data_goodput['previous']) / 125) / (self._time['current'] - self._time['previous'])
+            #  download_kbps = ((self._data_goodput['current'] - self._data_goodput['previous']) / 125) / (self._time['current'] - self._time['previous'])
+            download_kbps = (data_goodput_kilobytes * 8) / (self._time['current'] - self._time['previous'])
 
             # calculate time to first byte (milliseconds)
             try:
@@ -205,13 +209,14 @@ class Consumer():
 
 
             data = {'timestamp': time.time() - self._time['start'], # TODO
-                    'interests_sent': self._interests_sent['current'],
-                    'data_recieved': self._data_recieved['current'],
-                    'num_timeouts': self._num_timeouts['current'],
-                    'num_nacks': self._num_nacks['current'],
+                    'total_interests_sent': self._interests_sent['current'],
+                    'total_data_recieved': self._data_recieved['current'],
+                    'total_num_timeouts': self._num_timeouts['current'],
+                    'total_num_nacks': self._num_nacks['current'],
                     'packet_loss_percent': packet_loss,
                     'time_to_first_byte_ms': time_to_first_byte_ms,
-                    'data_goodput_kilobytes': self._data_goodput['current'] / 1000,
+                    'data_goodput_kilobytes': data_goodput_kilobytes,
+                    'total_data_goodput_kilobytes': self._data_goodput['current'] / 1000,
                     'bitrate_kbps': download_kbps,
                     'average_latency': average_latency}
 
