@@ -1,9 +1,12 @@
 #!/bin/bash
 
-# this bash script installs the NDN python client library for python3
+# this bash script installs the NDN python client library for python3, as well as other software
 
 sudo apt-get update
 sudo apt-get install build-essential libssl-dev libffi-dev python3-dev python3-pip -y
+
+# install dtach for running programs in the background with fabric
+sudo apt install dtach
 
 # Maintained version of pyndn currently does not have packet v0.3 support, so alternate version must be built
 # sudo pip3 install pyndn

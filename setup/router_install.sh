@@ -15,5 +15,8 @@ sudo apt-get install nlsr -y
 sudo apt-get install libchronosync -y
 sudo apt-get install libpsync -y
 
+# install dtach
+sudo apt install dtach
+
 # copy a .vimrc (provides useful remappings)
 cp /local/repository/.vimrc ~/

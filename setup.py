@@ -173,7 +173,6 @@ for host, number in HOSTS.items():
 
 # run methods based on command line arguments specified
 if args.setup:
-    install_dtach()
     create_faces()
     start_nlsr()
     start_ping_servers()
