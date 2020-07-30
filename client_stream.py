@@ -22,7 +22,6 @@ def dump(*list):
 class Consumer():
     """Creates a consumer for sending interest packets."""
 
-
     def __init__(self, ip, verbose=0):
 
         # constants for adjusting performance
@@ -208,7 +207,7 @@ class Consumer():
             average_latency = 'not implemented' # TODO
 
 
-            data = {'timestamp': time.time() - self._time['start'], # TODO
+            data = {'timestamp': time.time() - self._time['start'], # seconds since first interest
                     'total_interests_sent': self._interests_sent['current'],
                     'total_data_recieved': self._data_recieved['current'],
                     'total_num_timeouts': self._num_timeouts['current'],

@@ -8,7 +8,7 @@ from fabric import Connection
 
 
 def install_dtach():
-    """Installs dtach on all connections"""
+    """Installs dtach on all connections."""
     for c in connection.values():
         c.run('sudo apt install dtach')
 
