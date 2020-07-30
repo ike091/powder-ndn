@@ -56,10 +56,15 @@ def shape_link(this_connection, interface, latency, packet_loss, bandwidth, late
 
     # TODO: fix this to work with no latency and packet loss values
 
-    #  this_connection.run(f'sudo tc qdisc del dev {interface} root')
     this_connection.run(f'sudo tc qdisc replace dev {interface} root handle 1: netem loss {packet_loss}% delay {latency}ms {latency_variation}ms distribution normal')
     this_connection.run(f'sudo tc qdisc replace dev {interface} parent 1: handle 2: tbf rate {bandwidth}mbit latency 400ms burst 100mbit')
     this_connection.run(f'sudo tc qdisc show dev {interface}')
+
+
+def clear_qdiscs():
+    """Clears the two qdiscs on the up-cl router."""
+    connection['up-cl'].run(f'sudo tc qdisc del dev eth2 root')
+    connection['up-cl'].run(f'sudo tc qdisc del dev eth3 root')
 
 
 def reset_nfd():
@@ -118,6 +123,9 @@ parser.add_argument("-e", "--external_latency", help="set external latency (ms)"
 # bandwidth parameters (note that a 0 indicates no bandwidth restriction)
 parser.add_argument("-b", "--bandwidth", help="set internal and external bandwidth (mbits) - usage: -b [INTERNAL] [EXTERNAL]", type=int, default=[0, 0], nargs=2)
 
+# remove all network adjustments option
+parser.add_argument("--clear", help="clear network qdiscs", action="store_true")
+
 # pull from github option
 parser.add_argument("-u", "--update_repos", help="pull new changes into all profile repositories", action="store_true")
 
@@ -127,6 +135,7 @@ parser.add_argument("-a", "--address", help="sets the MEB as the server location
 
 # adjust network caching
 parser.add_argument("-c", "--caching", help="turn in-network caching on or off", choices=["on", "off"])
+
 
 args = parser.parse_args()
 
@@ -172,7 +181,11 @@ elif args.caching is not None:
     set_caching(False)
 
 # configure network latency, loss, and bandwidth parameters
-configure_network(args.internal_latency, args.internal_loss, args.bandwidth[0], args.external_latency, args.external_loss, args.bandwidth[1])
+if args.internal_latency != 0 or args.external_latency != 0 or args.internal_loss != 0 or args.external_loss != 0 or args.bandwidth != [0, 0]:
+    configure_network(args.internal_latency, args.internal_loss, args.bandwidth[0], args.external_latency, args.external_loss, args.bandwidth[1])
+
+if args.clear:
+    clear_qdiscs()
 
 
 # close connections when finished
