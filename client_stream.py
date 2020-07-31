@@ -28,7 +28,6 @@ class Consumer():
         self.UPDATE_TIMING = 0.001
         self.SEND_RATE = 0.00001
 
-
         # establish asyncio loop
         self._loop = asyncio.get_event_loop()
         #  self._loop.set_debug(True)
@@ -52,10 +51,12 @@ class Consumer():
         self._num_timeouts = {'current': 0, 'previous': 0}
         self._time = {'current': 0, 'previous': 0, 'start': 0}
         self._time_to_first_byte = 0
+        # keeps track of the whether the first data packet has been recieved
+        self._send_latency_packet = False
+        self._latency = {}
+        self._latency_packet = ""
         self._data_goodput = {'current': 0, 'previous': 0}
 
-        # keeps track of the whether the first data packet has been recieved
-        self._is_first_data = True
 
         print(f"Consumer instance created with UDP tunnel to {ip}!")
 
@@ -111,6 +112,9 @@ class Consumer():
         # send interests for a specified amount of time
         i = 0
         while time.time() - self._time['start'] < send_time:
+            if self._send_latency_packet:
+                self._latency_packet = prefix + str(i)
+                self._latency['interest'] = time.time()
             self._send(prefix + str(i))
             i += 1
             # interest sending rate
@@ -131,9 +135,8 @@ class Consumer():
     def onData(self, interest, data):
         """Called when a data packet is recieved."""
 
-        if self._is_first_data:
-            self._time_to_first_byte = time.time()
-            self._is_first_data = False
+        if self._latency_packet == data.getName().toUri():
+            self._latency['data'] = time.time()
 
         self._data_recieved['current'] += 1
 
@@ -174,6 +177,9 @@ class Consumer():
             self._num_timeouts['previous'] = self._num_timeouts['current']
             self._interests_sent['previous'] = self._interests_sent['current']
 
+            # arrange for latency measurement
+            self._send_latency_packet = True
+
             # allow other tasks to be completed
             await asyncio.sleep(measurement_rate)
 
@@ -206,6 +212,7 @@ class Consumer():
             # calculate average latency
             average_latency = 'not implemented' # TODO
 
+            latency = self._latency['data'] - self._latency['interest']
 
             data = {'timestamp': time.time() - self._time['start'], # seconds since first interest
                     'total_interests_sent': self._interests_sent['current'],
@@ -214,6 +221,7 @@ class Consumer():
                     'total_num_nacks': self._num_nacks['current'],
                     'packet_loss_percent': packet_loss,
                     'time_to_first_byte_ms': time_to_first_byte_ms,
+                    'latency': latency,
                     'data_goodput_kilobytes': data_goodput_kilobytes,
                     'total_data_goodput_kilobytes': self._data_goodput['current'] / 1000,
                     'bitrate_kbps': download_kbps,
