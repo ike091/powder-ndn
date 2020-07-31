@@ -68,11 +68,11 @@ def clear_qdiscs():
 
 
 def reset_nfd():
-    """Restarts the NDN forwarding daemon."""
-    for k, c in connection.items():
-        if k != 'UE1':
-            c.run('nfd-stop')
-            c.run('nfd-start')
+    """Restarts the NDN forwarding daemon on all routers."""
+    routers = ('up-cl', 'external-dn', 'internal-dn')
+    for router in routers:
+        c.run('nfd-stop')
+        c.run('nfd-start')
 
 
 def update_repositories():
@@ -83,12 +83,12 @@ def update_repositories():
 
 def set_caching(caching_state):
     """Turn caching in the network on or off."""
-    for k, c in connection.items():
-        if k != 'UE1':
-            if caching_state:
-                c.run('nfdc cs config serve on')
-            else:
-                c.run('nfdc cs config serve off')
+    routers = ('up-cl', 'external-dn', 'internal-dn')
+    for router in routers:
+        if caching_state:
+            c.run('nfdc cs config serve on')
+        else:
+            c.run('nfdc cs config serve off')
 
 
 def parse_packet_loss(string):
@@ -107,7 +107,8 @@ def parse_packet_loss(string):
 parser = argparse.ArgumentParser()
 
 # add mandatory pc number section
-parser.add_argument("pc_number", help="the number corresponding to the pc running the POWDER experiement")
+parser.add_argument("pc_number", help="the number corresponding to the pc running the routers in the experiement")
+parser.add_argument("pc_number_2", help="the number corresponding to the pc running the client nodes in the experiement")
 
 # network setup and reset options
 group = parser.add_mutually_exclusive_group()
@@ -129,7 +130,6 @@ parser.add_argument("--clear", help="clear network qdiscs", action="store_true")
 # pull from github option
 parser.add_argument("-u", "--update_repos", help="pull new changes into all profile repositories", action="store_true")
 
-
 # set to specify alternate ssh address
 parser.add_argument("-a", "--address", help="sets the MEB as the server location", action="store_true")
 
@@ -147,15 +147,21 @@ else:
 ADDRESS_END = '.emulab.net'
 USERNAME = 'ike091'
 
-HOSTS = {'UE1': '3',
-                'up-cl': '4',
+ROUTER_HOSTS = {'up-cl': '3',
                 'external-dn': '1',
                 'internal-dn': '2'
                 }
 
+CLIENT_HOSTS = {'client1': '1'}
+
+
 # establish connections
 connection = {}
-for host, number in HOSTS.items():
+for host, number in ROUTER_HOSTS.items():
+    connection[host] = Connection(USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
+    print('Connection added to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
+
+for host, number in CLIENT_HOSTS.items():
     connection[host] = Connection(USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
     print('Connection added to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
 
