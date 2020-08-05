@@ -52,8 +52,9 @@ class Consumer():
         self._time = {'current': 0, 'previous': 0, 'start': 0}
         self._time_to_first_byte = 0
         # keeps track of the whether the first data packet has been recieved
+        self._is_first_packet = True
         self._send_latency_packet = False
-        self._latency = {}
+        self._latency = {'interest': 0, 'data': 0}
         self._latency_packet = ""
         self._data_goodput = {'current': 0, 'previous': 0}
 
@@ -115,6 +116,7 @@ class Consumer():
             if self._send_latency_packet:
                 self._latency_packet = prefix + str(i)
                 self._latency['interest'] = time.time()
+                self._send_latency_packet = False
             self._send(prefix + str(i))
             i += 1
             # interest sending rate
@@ -134,6 +136,10 @@ class Consumer():
 
     def onData(self, interest, data):
         """Called when a data packet is recieved."""
+
+        if self._is_first_packet:
+            self._time_to_first_byte = time.time()
+            self._is_first_packet = False
 
         if self._latency_packet == data.getName().toUri():
             self._latency['data'] = time.time()
@@ -216,16 +222,18 @@ class Consumer():
 
             data = {'timestamp': time.time() - self._time['start'], # seconds since first interest
                     'total_interests_sent': self._interests_sent['current'],
-                    'total_data_recieved': self._data_recieved['current'],
+                    #  'total_data_recieved': self._data_recieved['current'],
                     'total_num_timeouts': self._num_timeouts['current'],
-                    'total_num_nacks': self._num_nacks['current'],
+                    #  'total_num_nacks': self._num_nacks['current'],
                     'packet_loss_percent': packet_loss,
                     'time_to_first_byte_ms': time_to_first_byte_ms,
                     'latency': latency,
-                    'data_goodput_kilobytes': data_goodput_kilobytes,
-                    'total_data_goodput_kilobytes': self._data_goodput['current'] / 1000,
+                    #  'data_goodput_kilobytes': data_goodput_kilobytes,
+                    #  'total_data_goodput_kilobytes': self._data_goodput['current'] / 1000,
                     'bitrate_kbps': download_kbps,
-                    'average_latency': average_latency}
+                    #  'average_latency': average_latency
+                    }
+
 
             # add data to log
             self._data.append(data)
