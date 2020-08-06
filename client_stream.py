@@ -221,6 +221,8 @@ class Consumer():
                 latency = 0
             else:
                 latency = (self._latency['data'] - self._latency['interest']) * 1000
+                if latency < 0:
+                    latency = 0
 
             data = {'timestamp': time.time() - self._time['start'], # seconds since first interest
                     'total_interests_sent': self._interests_sent['current'],
