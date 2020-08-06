@@ -109,6 +109,7 @@ parser = argparse.ArgumentParser()
 # add mandatory pc number section
 parser.add_argument("pc_number", help="the number corresponding to the pc running the routers in the experiement")
 parser.add_argument("pc_number_2", help="the number corresponding to the pc running the client nodes in the experiement")
+parser.add_argument("client_node_count", help="the number of client nodes in the experiment")
 
 # network setup and reset options
 group = parser.add_mutually_exclusive_group()
@@ -152,7 +153,9 @@ ROUTER_HOSTS = {'up-cl': '3',
                 'internal-dn': '2'
                 }
 
-CLIENT_HOSTS = {'client1': '1'}
+CLIENT_HOSTS = {}
+for i in range(1, args.client_node_count + 1):
+    CLIENT_HOSTS[f'client{i}'] = str(i)
 
 
 # establish connections
