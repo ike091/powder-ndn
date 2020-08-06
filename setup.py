@@ -71,8 +71,8 @@ def reset_nfd():
     """Restarts the NDN forwarding daemon on all routers."""
     routers = ('up-cl', 'external-dn', 'internal-dn')
     for router in routers:
-        c.run('nfd-stop')
-        c.run('nfd-start')
+        connection[router].run('nfd-stop')
+        connection[router].run('nfd-start')
 
 
 def update_repositories():
@@ -86,9 +86,9 @@ def set_caching(caching_state):
     routers = ('up-cl', 'external-dn', 'internal-dn')
     for router in routers:
         if caching_state:
-            c.run('nfdc cs config serve on')
+            connection[router].run('nfdc cs config serve on')
         else:
-            c.run('nfdc cs config serve off')
+            connection[router].run('nfdc cs config serve off')
 
 
 def parse_packet_loss(string):
@@ -162,7 +162,7 @@ for host, number in ROUTER_HOSTS.items():
     print('Connection added to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
 
 for host, number in CLIENT_HOSTS.items():
-    connection[host] = Connection(USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
+    connection[host] = Connection(USERNAME + '@' + f'pc{args.pc_number_2}-fortvm-' + str(number) + ADDRESS_END)
     print('Connection added to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
 
 
