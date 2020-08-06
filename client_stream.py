@@ -196,7 +196,6 @@ class Consumer():
             data_goodput_kilobytes  = (self._data_goodput['current'] - self._data_goodput['previous']) / 1000
 
             # calculate kbps
-            #  download_kbps = ((self._data_goodput['current'] - self._data_goodput['previous']) / 125) / (self._time['current'] - self._time['previous'])
             download_kbps = (data_goodput_kilobytes * 8) / (self._time['current'] - self._time['previous'])
 
             # calculate time to first byte (milliseconds)
@@ -222,14 +221,14 @@ class Consumer():
 
             data = {'timestamp': time.time() - self._time['start'], # seconds since first interest
                     'total_interests_sent': self._interests_sent['current'],
-                    #  'total_data_recieved': self._data_recieved['current'],
+                    'total_data_recieved': self._data_recieved['current'],
                     'total_num_timeouts': self._num_timeouts['current'],
-                    #  'total_num_nacks': self._num_nacks['current'],
+                    'total_num_nacks': self._num_nacks['current'],
                     'packet_loss_percent': packet_loss,
                     'time_to_first_byte_ms': time_to_first_byte_ms,
                     'latency': latency,
-                    #  'data_goodput_kilobytes': data_goodput_kilobytes,
-                    #  'total_data_goodput_kilobytes': self._data_goodput['current'] / 1000,
+                    'data_goodput_kilobytes': data_goodput_kilobytes,
+                    'total_data_goodput_kilobytes': self._data_goodput['current'] / 1000,
                     'bitrate_kbps': download_kbps,
                     #  'average_latency': average_latency
                     }
@@ -285,6 +284,7 @@ def main():
     parser.add_argument("-i", "--ipaddress", help="the ip address to tunnel to", default="10.10.1.1")
     #  parser.add_argument("-r", "--rate", help="the rate at which interests are sent", type=rate_parser, default="0.00001")
     parser.add_argument("-v", "--verbosity", help="increase output verbosity", choices=[0, 1, 2], type=int, default=0)
+    parser.add_argument("-d", "--demo", help="enable demo mode (more intuitive printouts)", action="store_true")
 
     args = parser.parse_args()
 
@@ -312,8 +312,19 @@ def main():
             i += 1
 
     # print results to stdout
-    for dataframe in final_data:
-        print(dataframe)
+    if not args.demo:
+        for dataframe in final_data:
+            print(dataframe)
+
+    # print modified results for demo
+    if args.demo:
+        for dataframe in final_data:
+            print(dataframe.bitrate_kbps)
+            print(f"Average bitrate: {dataframe.bitrate_kbps.sum() / len(dataframe.index)} kbps")
+            print(len(dataframe.index))
+            print(f"Time to first byte: {dataframe.loc[0, 'time_to_first_byte_ms']} ms")
+
+
 
 
 main()
