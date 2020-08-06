@@ -217,7 +217,7 @@ class Consumer():
             # calculate average latency
             average_latency = 'not implemented' # TODO
 
-            latency = self._latency['data'] - self._latency['interest']
+            latency = self._latency['data'] - self._latency['interest'] * 1000
 
             data = {'timestamp': time.time() - self._time['start'], # seconds since first interest
                     'total_interests_sent': self._interests_sent['current'],
@@ -319,9 +319,9 @@ def main():
     # print modified results for demo
     if args.demo:
         for dataframe in final_data:
-            print(dataframe.bitrate_kbps)
-            print(f"Average bitrate: {dataframe.bitrate_kbps.sum() / len(dataframe.index)} kbps")
-            print(len(dataframe.index))
+            print(dataframe[['total_data_goodput_kilobytes', 'bitrate_kbps', 'latency']])
+            #  print(f"Average bitrate: {dataframe.bitrate_kbps.sum() / len(dataframe.index)} kbps")
+            #  print(len(dataframe.index))
             print(f"Time to first byte: {dataframe.loc[0, 'time_to_first_byte_ms']} ms")
 
 
