@@ -327,20 +327,21 @@ def main():
             #  print(len(dataframe.index))
             #  print(f"Time to first byte: {dataframe.loc[0, 'time_to_first_byte_ms']} ms")
 
-            # compute average latency, loss, and bitrate
+            # compute average bitrate
+            total = num = 0
             for bitrate in dataframe['bitrate_kbps'].tolist():
-                total = num = 0
                 if bitrate != 0:
                     total += bitrate
                     num += 1
-                print(f"Average bitrate: {total / num} kbps")
+            print(f"Average bitrate: {total / num} kbps")
 
+            # compute average latency
+            total = num = 0
             for latency in dataframe['latency'].tolist():
-                total = num = 0
                 if latency != 0:
                     total += latency
                     num += 1
-                print(f"Average latency: {total / num} ms")
+            print(f"Average latency: {total / num} ms")
 
             #  print(f"Average packet loss: {(dataframe.tail(1)['total_num_timeouts']) / (dataframe.tail(1)['total_interests_sent])}")
 
