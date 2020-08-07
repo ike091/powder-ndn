@@ -313,7 +313,7 @@ def main():
     if args.filename is not None:
         i = 0
         for dataframe in final_data:
-            dataframe.to_csv(args.filename + args.prefix[i].replace('/', '-'), index=False)
+            dataframe.to_csv(args.filename + args.prefix[i].replace('/', '-') + '.csv', index=False)
             i += 1
 
     # print results to stdout

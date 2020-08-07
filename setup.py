@@ -98,6 +98,11 @@ def set_servers(server_state):
         print('servers on')
 
 
+def run_client(number):
+    number = str(number)
+    run_bg(connection['client' + number], f'python3 /local/repository/client_stream.py -p /ndn/external/test -f data{number} -i 155.98.37.73')
+
+
 def stream_on_all_nodes():
     """Start streaming on all client nodes."""
 
@@ -156,6 +161,9 @@ parser.add_argument("-c", "--caching", help="turn in-network caching on or off",
 # start and stop servers
 parser.add_argument("-s", "--servers", help="turn servers on or off", choices=["on", "off"])
 
+# run clients
+parser.add_argument("--r", "--run_clients", help="start client streaming", action="store_true")
+
 
 args = parser.parse_args()
 
@@ -184,7 +192,7 @@ for host, number in ROUTER_HOSTS.items():
     print('Connection added to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
 
 for host, number in CLIENT_HOSTS.items():
-    connection[host] = Connection(USERNAME + '@' + f'pc{args.pc_number_2}-fortvm-' + str(number) + ADDRESS_END)
+    connection[host] = Connection(USERNAME + '@' + f'pc{args.pc_number_2}-mebvm-' + str(number) + ADDRESS_END)
     print('Connection added to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
 
 
@@ -213,6 +221,10 @@ if args.servers is not None and args.servers == "on":
     set_servers(True)
 elif args.servers is not None:
     set_servers(False)
+
+# run clients if flag is specified
+if args.run_clients:
+    run_client("1")
 
 # configure network latency, loss, and bandwidth parameters
 if args.internal_latency != 0 or args.external_latency != 0 or args.internal_loss != 0 or args.external_loss != 0 or args.bandwidth != [0, 0]:
