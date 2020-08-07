@@ -91,6 +91,22 @@ def set_caching(caching_state):
             connection[router].run('nfdc cs config serve off')
 
 
+def set_servers(server_state):
+    if server_state:
+        run_bg(connection['external-dn'], 'python3 /local/repository/server_stream.py -p /ndn/external/test')
+        run_bg(connection['internal-dn'], 'python3 /local/repository/server_stream.py -p /ndn/internal/test')
+        print('servers on')
+
+
+def stream_on_all_nodes():
+    """Start streaming on all client nodes."""
+
+    # iterate only through client nodes
+    for name, c in connection.items():
+        if name[:6] == 'client':
+            c.run('cd /local/repository && python3 client_stream.py')
+
+
 def parse_packet_loss(string):
     """Properly parse packet loss integer values."""
     try:
@@ -109,7 +125,7 @@ parser = argparse.ArgumentParser()
 # add mandatory pc number section
 parser.add_argument("pc_number", help="the number corresponding to the pc running the routers in the experiement")
 parser.add_argument("pc_number_2", help="the number corresponding to the pc running the client nodes in the experiement")
-parser.add_argument("client_node_count", help="the number of client nodes in the experiment")
+parser.add_argument("client_node_count", help="the number of client nodes in the experiment", type=int)
 
 # network setup and reset options
 group = parser.add_mutually_exclusive_group()
@@ -136,6 +152,9 @@ parser.add_argument("-a", "--address", help="sets the MEB as the server location
 
 # adjust network caching
 parser.add_argument("-c", "--caching", help="turn in-network caching on or off", choices=["on", "off"])
+
+# start and stop servers
+parser.add_argument("-s", "--servers", help="turn servers on or off", choices=["on", "off"])
 
 
 args = parser.parse_args()
@@ -189,6 +208,12 @@ if args.caching is not None and args.caching == "on":
 elif args.caching is not None:
     set_caching(False)
 
+# if server flag is specified, set accordingly
+if args.servers is not None and args.servers == "on":
+    set_servers(True)
+elif args.servers is not None:
+    set_servers(False)
+
 # configure network latency, loss, and bandwidth parameters
 if args.internal_latency != 0 or args.external_latency != 0 or args.internal_loss != 0 or args.external_loss != 0 or args.bandwidth != [0, 0]:
     configure_network(args.internal_latency, args.internal_loss, args.bandwidth[0], args.external_latency, args.external_loss, args.bandwidth[1])
@@ -200,4 +225,4 @@ if args.clear:
 # close connections when finished
 for c in connection.values():
     c.close()
-    print('Connection closed to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
+    #  print('Connection closed to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END) FIXME
