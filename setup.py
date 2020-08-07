@@ -100,8 +100,10 @@ def set_servers(server_state):
 
 
 def run_client(number):
-    number = str(number)
-    run_bg(connection['client' + number], f'python3 /local/repository/client_stream.py -p /ndn/external/test -f data{number} -i 155.98.37.73')
+    #  number = str(number)
+    #  run_bg(connection['client' + number], f'python3 /local/repository/client_stream.py -p /ndn/external/test -p /ndn/internal/test -t 120 -f data{number} -i 155.98.37.73')
+    for i in range(1, 9):
+        run_bg(connection['client' + str(i)], f'python3 /local/repository/client_stream.py -p /ndn/external/test -p /ndn/internal/test -t 20 -f data{str(i)} -i 155.98.37.73')
 
 
 def stream_on_all_nodes():
@@ -121,8 +123,16 @@ def fetch_data():
             #  connection[f'client{str(i)}'].get(f"/users/ike091/data{str(i)}-ndn-internal-test.csv", local=f"/mnt/c/Isaak/POWDER/powder-ndn/data/data{str(i)}-ndn-internal-test.csv")
             #  i += 1
 
-    connection['client1'].get("/users/ike091/data1-ndn-external-test.csv", local="/mnt/c/Isaak/POWDER/powder-ndn/data/data1-ndn-external-test.csv")
-    connection['client1'].get("/users/ike091/data1-ndn-internal-test.csv", local="/mnt/c/Isaak/POWDER/powder-ndn/data/data1-ndn-internal-test.csv")
+    for i in range(1, 9):
+        connection['client' + str(i)].get(f"/users/ike091/data{str(i)}-ndn-external-test.csv", local=f"/mnt/c/Isaak/POWDER/powder-ndn/data/data{str(i)}-ndn-external-test.csv")
+        connection['client' + str(i)].get(f"/users/ike091/data{str(i)}-ndn-internal-test.csv", local=f"/mnt/c/Isaak/POWDER/powder-ndn/data/data{str(i)}-ndn-internal-test.csv")
+
+    for i in range(1, 9):
+        connection['client' + str(i)].run(f"rm /users/ike091/data{str(i)}-ndn-external-test.csv")
+        connection['client' + str(i)].run(f"rm /users/ike091/data{str(i)}-ndn-internal-test.csv")
+
+    #  connection['client1'].get("/users/ike091/data1-ndn-external-test.csv", local="/mnt/c/Isaak/POWDER/powder-ndn/data/data1-ndn-external-test.csv")
+    #  connection['client1'].get("/users/ike091/data1-ndn-internal-test.csv", local="/mnt/c/Isaak/POWDER/powder-ndn/data/data1-ndn-internal-test.csv")
 
 
 def parse_packet_loss(string):
@@ -208,7 +218,7 @@ for host, number in ROUTER_HOSTS.items():
     print('Connection added to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
 
 for host, number in CLIENT_HOSTS.items():
-    connection[host] = Connection(USERNAME + '@' + f'pc{args.pc_number_2}-mebvm-' + str(number) + ADDRESS_END)
+    connection[host] = Connection(USERNAME + '@' + f'pc{args.pc_number_2}-fortvm-' + str(number) + ADDRESS_END)
     print('Connection added to: ' + USERNAME + '@' + ADDRESS_BEGINNING + str(number) + ADDRESS_END)
 
 
