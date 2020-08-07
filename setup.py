@@ -102,7 +102,7 @@ def set_servers(server_state):
 def run_client(number):
     #  number = str(number)
     #  run_bg(connection['client' + number], f'python3 /local/repository/client_stream.py -p /ndn/external/test -p /ndn/internal/test -t 120 -f data{number} -i 155.98.37.73')
-    for i in range(1, 9):
+    for i in range(1, 5):
         run_bg(connection['client' + str(i)], f'python3 /local/repository/client_stream.py -p /ndn/external/test -p /ndn/internal/test -t 20 -f data{str(i)} -i 155.98.37.73')
 
 
@@ -123,11 +123,9 @@ def fetch_data():
             #  connection[f'client{str(i)}'].get(f"/users/ike091/data{str(i)}-ndn-internal-test.csv", local=f"/mnt/c/Isaak/POWDER/powder-ndn/data/data{str(i)}-ndn-internal-test.csv")
             #  i += 1
 
-    for i in range(1, 9):
+    for i in range(1, 5):
         connection['client' + str(i)].get(f"/users/ike091/data{str(i)}-ndn-external-test.csv", local=f"/mnt/c/Isaak/POWDER/powder-ndn/data/data{str(i)}-ndn-external-test.csv")
         connection['client' + str(i)].get(f"/users/ike091/data{str(i)}-ndn-internal-test.csv", local=f"/mnt/c/Isaak/POWDER/powder-ndn/data/data{str(i)}-ndn-internal-test.csv")
-
-    for i in range(1, 9):
         connection['client' + str(i)].run(f"rm /users/ike091/data{str(i)}-ndn-external-test.csv")
         connection['client' + str(i)].run(f"rm /users/ike091/data{str(i)}-ndn-internal-test.csv")
 
