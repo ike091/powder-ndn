@@ -4,6 +4,7 @@ This script handles setup for the powder-ndn profile
 """
 import argparse
 from fabric import Connection
+from fabric.transfer import Transfer
 
 
 
@@ -109,7 +110,19 @@ def stream_on_all_nodes():
     # iterate only through client nodes
     for name, c in connection.items():
         if name[:6] == 'client':
-            c.run('cd /local/repository && python3 client_stream.py')
+            run_bg(c, 'python3 /local/repository/client_stream.py -p /ndn/external/test -f data-{name} -i 155.98.37.73')
+
+
+def fetch_data():
+    #  i = 1
+    #  for name, c in connection.items():
+        #  if name[:6] == 'client':
+            #  connection[f'client{str(i)}'].get(f"/users/ike091/data{str(i)}-ndn-external-test.csv", local=f"/mnt/c/Isaak/POWDER/powder-ndn/data/data{str(i)}-ndn-external-test.csv")
+            #  connection[f'client{str(i)}'].get(f"/users/ike091/data{str(i)}-ndn-internal-test.csv", local=f"/mnt/c/Isaak/POWDER/powder-ndn/data/data{str(i)}-ndn-internal-test.csv")
+            #  i += 1
+
+    connection['client1'].get("/users/ike091/data1-ndn-external-test.csv", local="/mnt/c/Isaak/POWDER/powder-ndn/data/data1-ndn-external-test.csv")
+    connection['client1'].get("/users/ike091/data1-ndn-internal-test.csv", local="/mnt/c/Isaak/POWDER/powder-ndn/data/data1-ndn-internal-test.csv")
 
 
 def parse_packet_loss(string):
@@ -162,7 +175,10 @@ parser.add_argument("-c", "--caching", help="turn in-network caching on or off",
 parser.add_argument("-s", "--servers", help="turn servers on or off", choices=["on", "off"])
 
 # run clients
-parser.add_argument("--r", "--run_clients", help="start client streaming", action="store_true")
+parser.add_argument("-r", "--run_clients", help="start client streaming", action="store_true")
+
+# fetch streaming data
+parser.add_argument("-f", "--fetch", help="fetch client streaming data", action="store_true")
 
 
 args = parser.parse_args()
@@ -223,8 +239,12 @@ elif args.servers is not None:
     set_servers(False)
 
 # run clients if flag is specified
-if args.run_clients:
+if args.run_clients is not None and args.run_clients:
     run_client("1")
+
+# fetch data if requested
+if args.fetch is not None and args.fetch:
+    fetch_data()
 
 # configure network latency, loss, and bandwidth parameters
 if args.internal_latency != 0 or args.external_latency != 0 or args.internal_loss != 0 or args.external_loss != 0 or args.bandwidth != [0, 0]:
